@@ -16,7 +16,7 @@ The interactive dashboard is deployed on Streamlit Community Cloud and can be ac
 
 ### 📸 Dashboard Preview
 
-![Dashboard Screenshot](images/dashboard.png)
+![Dashboard Screenshot](/images/dashboard.png)
 
 ---
 
