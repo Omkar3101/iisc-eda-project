@@ -133,7 +133,7 @@ if df is not None:
             df['Benchmark Status'] = df['CNCI'].apply(lambda x: 'Below Average (< 1.0)' if x < 1.0 else 'Above Average (>= 1.0)')
             below_count = len(df[df['CNCI'] < 1.0])
             
-            st.metric("Rare Failures (Years < 1.0)", f"{below_count} / {len(df)} Years", delta="Anomalies", delta_color="inverse")
+            st.metric("Rare Failures ( < 1.0)", f"{below_count} / {len(df)} Rows", delta="Anomalies", delta_color="inverse")
 
             fig_strip = px.strip(
                 df, 
@@ -525,7 +525,6 @@ if df is not None:
         with col_c1:
             st.markdown(f"##### 1. Paradox: Collab vs Quality (r = {corr_weak:.2f})")
             try:
-                import statsmodels
                 trend_mode = "ols"
             except ImportError:
                 trend_mode = None
