@@ -339,60 +339,69 @@ if df is not None:
         </div>
         """, unsafe_allow_html=True)
 
-        # --- Data Prep ---
-        impact_df = df.groupby('Country')[['% Docs Cited', '% Documents in Top 1%']].mean().reset_index()
+        # --- WIDGETS AT THE TOP ---
+        # Get list of top countries to pre-select in the multiselect
+        top_countries_list = df.groupby('Country')['Documents'].sum().nlargest(10).index.tolist()
+        
+        selected_countries_spec = st.multiselect(
+            "Select countries to analyze:", 
+            df['Country'].unique(), 
+            default=top_countries_list,
+            key="spectrum_multiselect" # Unique key to avoid conflicts
+        )
+        
+        view_option_spec = st.radio(
+            "Select View:",
+            ("View Overall Performance", "View Trends Over Time"),
+            horizontal=True,
+            label_visibility="collapsed",
+            key="spectrum_radio" # Unique key
+        )
+        st.markdown("---")
 
-        col1, col2 = st.columns(2)
+        # --- CONDITIONAL DISPLAY LOGIC ---
+        if selected_countries_spec:
+            df_spec = df[df['Country'].isin(selected_countries_spec)]
 
-        # --- LEFT CHART: RELEVANCE ---
-        with col1:
-            st.markdown("##### 1. Relevance: % Docs Cited (The Baseline)")
-            top_rel = impact_df.sort_values(by='% Docs Cited', ascending=False).head(10)
-            
-            # Zoom Logic
-            min_val = top_rel['% Docs Cited'].min()
-            zoom_min = int(min_val - 2)
+            # --- VIEW 1: OVERALL PERFORMANCE (Bar Charts) ---
+            if view_option_spec == "View Overall Performance":
+                impact_df = df_spec.groupby('Country')[['% Docs Cited', '% Documents in Top 1%']].mean().reset_index()
+                col1, col2 = st.columns(2)
 
-            fig_rel = px.bar(
-                top_rel, x='% Docs Cited', y='Country', orientation='h',
-                color='% Docs Cited', color_continuous_scale='Blues', text_auto='.2f'
-            )
-            fig_rel.update_layout(
-                yaxis=dict(autorange="reversed"),
-                xaxis=dict(range=[zoom_min, 100], title="Avg % Docs Cited (Zoomed)"),
-                height=400, coloraxis_showscale=False, margin=dict(l=0, r=0, t=30, b=0)
-            )
-            st.plotly_chart(fig_rel, use_container_width=True)
-            st.caption("✅ **Insight:** High symmetry (Skew 0.05). Almost every paper published gets cited.")
+                with col1:
+                    st.markdown("##### 1. Baseline: Research Relevance")
+                    top_rel = impact_df.sort_values(by='% Docs Cited', ascending=True)
+                    zoom_min = int(top_rel['% Docs Cited'].min() - 1) if not top_rel.empty else 90
+                    fig_rel = px.bar(top_rel, x='% Docs Cited', y='Country', orientation='h', color='% Docs Cited', color_continuous_scale='Blues', text_auto='.2f')
+                    fig_rel.update_layout(yaxis_title=None, xaxis=dict(range=[zoom_min, 100], title="Avg % Docs Cited"), height=400, coloraxis_showscale=False, margin=dict(l=0, r=0, t=30, b=0))
+                    st.plotly_chart(fig_rel, use_container_width=True)
 
-        # --- RIGHT CHART: EXCELLENCE ---
-        with col2:
-            st.markdown("##### 2. Excellence: % Top 1% Papers (The Ceiling)")
-            top_elite = impact_df.sort_values(by='% Documents in Top 1%', ascending=False).head(10)
+                with col2:
+                    st.markdown("##### 2. Ceiling: Research Excellence")
+                    top_elite = impact_df.sort_values(by='% Documents in Top 1%', ascending=True)
+                    fig_elite = px.bar(top_elite, x='% Documents in Top 1%', y='Country', orientation='h', color='% Documents in Top 1%', color_continuous_scale=['#FFF8E1', '#FFC107'], text_auto='.2f')
+                    fig_elite.add_vline(x=1.0, line_dash="dash", line_color="red", annotation_text="Global Baseline")
+                    fig_elite.update_layout(yaxis_title=None, xaxis=dict(title="Avg % in Top 1%"), height=400, coloraxis_showscale=False, margin=dict(l=0, r=0, t=30, b=0))
+                    st.plotly_chart(fig_elite, use_container_width=True)
 
-            fig_elite = px.bar(
-                top_elite, x='% Documents in Top 1%', y='Country', orientation='h',
-                # Custom Gold Gradient
-                color='% Documents in Top 1%', 
-                color_continuous_scale=['#FFF8E1', '#FFC107', '#FF6F00'], 
-                text_auto='.2f'
-            )
-            fig_elite.add_vline(x=1.0, line_dash="dash", line_color="red", annotation_text="Global Baseline (1%)")
-            
-            fig_elite.update_layout(
-                yaxis=dict(autorange="reversed"),
-                xaxis=dict(title="Avg % in Top 1%"),
-                height=400, coloraxis_showscale=False, margin=dict(l=0, r=0, t=30, b=0)
-            )
-            st.plotly_chart(fig_elite, use_container_width=True)
-            
-            # Specific Country Insights from your EDA
-            st.info("""
-            🏆 **Key Performers:**
-            - **🇸🇪 Sweden:** Overall Leader (Avg **1.93%**).
-            - **🇧🇷 Brazil:** Most Consistent (Crossed 2% threshold **10 times**).
-            - **🇩🇪 Germany:** Highest Single-Year Peak (**2.96%**).
-            """)
+            # --- VIEW 2: TRENDS OVER TIME (Line Charts) ---
+            else:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("##### 1. Relevance Over Time")
+                    fig_rel_trend = px.line(df_spec, x='Year', y='% Docs Cited', color='Country', markers=True, title="Trend of Research Relevance")
+                    fig_rel_trend.update_layout(height=400, legend=dict(orientation="h", y=-0.2, x=0), margin=dict(l=0, r=0, t=30, b=0))
+                    st.plotly_chart(fig_rel_trend, use_container_width=True)
+
+                with col2:
+                    st.markdown("##### 2. Excellence Over Time")
+                    fig_elite_trend = px.line(df_spec, x='Year', y='% Documents in Top 1%', color='Country', markers=True, title="Trend of Research Excellence")
+                    fig_elite_trend.add_hline(y=1.0, line_dash="dot", annotation_text="Global Avg", line_color="red")
+                    fig_elite_trend.update_layout(height=400, legend=dict(orientation="h", y=-0.2, x=0), margin=dict(l=0, r=0, t=30, b=0))
+                    st.plotly_chart(fig_elite_trend, use_container_width=True)
+        else:
+            st.warning("Please select at least one country to analyze.")
 
 # "⚔️4. Competitive Landscape"
     with tab4: 
