@@ -88,11 +88,34 @@ df = load_data()
 # -----------------------------------------------------------------------------
 if df is not None:
     
-    # --- (FIX 2: The HTML div for the cover image is added here) ---
+    # Cover Image
     st.markdown('<div class="cover-image"></div>', unsafe_allow_html=True)
+
+    # Title and Subheading
     st.title("🔬 Global Research Performance Analytics")
     st.markdown("##### *Project Intern/Trainee Hiring Assessment - PAIU-OPSA, IISc Bangalore*")
     st.markdown("---")
+
+    #Side Bar
+    with st.sidebar:
+        st.header("About")
+        st.markdown("""
+        This dashboard presents an in-depth analysis of global research performance metrics, developed as part of a hiring assessment for IISc Bangalore.
+        """)
+        
+        st.markdown("---")
+        
+        st.header("Project Resources")
+        st.markdown("🔗 [View Source Code on GitHub](https://github.com/Omkar3101/iisc-eda-project)")
+        
+        st.markdown("---")
+        
+        st.header("Author")
+        st.markdown("""
+        **Omkar Sharma**
+        - [LinkedIn](https://www.linkedin.com/in/omkar3101)
+        - [Email](mailto:omkarshar3101@gmail.com)
+        """)
 
     # TABS (Renamed for professional context)
     tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
