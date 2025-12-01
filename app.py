@@ -226,7 +226,7 @@ if df is not None:
             <ul>
                 <li><b>The Four Models (Left Chart):</b> Nations are segmented into strategic quadrants. The bubble color now indicates their average collaboration quality.</li>
                 <li><b>The Collaboration Myth (Right Chart):</b> Contrary to belief, for these top-tier nations, better collaboration quality shows <b>zero correlation</b> with producing more elite (Top 1%) papers, as proven by the flat red trendline.</li>
-            </ul>
+            </ul>  
         </div>
         """, unsafe_allow_html=True)
         
@@ -408,77 +408,189 @@ if df is not None:
         st.markdown("""
         <div class="insight-box orange-box">
             <h4>⚔️ Insight 4: The Ebb and Flow of Dominance</h4>
-            <p>This timeline shows how the gap between the #1 and #2 performer has changed over the years, revealing periods of intense monopoly and close competition.</p>
+            <p>Analyze market dominance using two powerful modes. Use the toggle below to switch between a high-level "Market View" and a detailed "Rivalry View".</p>
             <ul>
-                <li><b>Peak Dominance (2007):</b> China's massive spike shows a year of near-total market control.</li>
-                <li><b>Trend Analysis:</b> A falling line indicates the research field is becoming more competitive, while a rising line indicates a leader is solidifying their position.</li>
-            </ul>
+                <li>Peak Dominance (2007): China's massive spike shows a year of near-total market control.</li>
+                <li>Trend Analysis: A falling line indicates the research field is becoming more competitive, while a rising line indicates a leader is solidifying their position.</li>
+            </ul>        
         </div>
         """, unsafe_allow_html=True)
 
-        # --- Data Prep (No changes needed here) ---
-        gap_data = []
-        years = sorted(df['Year'].unique())
-        
-        for y in years:
-            year_df = df[df['Year'] == y].sort_values(by='Times Cited', ascending=False)
-            
-            if len(year_df) >= 2:
-                leader = year_df.iloc[0]
-                runner = year_df.iloc[1]
-                
-                if runner['Times Cited'] > 0:
-                    gap_pct = ((leader['Times Cited'] - runner['Times Cited']) / runner['Times Cited']) * 100
-                else:
-                    gap_pct = 0
-                
-                gap_data.append({
-                    'Year': y, 
-                    'Leader': leader['Country'], 
-                    'Runner-Up': runner['Country'], 
-                    'Dominance %': gap_pct, 
-                    'Leader Citations': leader['Times Cited']
-                })
-        
-        gap_df = pd.DataFrame(gap_data)
-
-        # --- Visual: Replaced Bar Chart with Line Chart ---
-        st.markdown("##### 📊 Trend of the Dominance Gap")
-        
-        fig_gap_line = px.line(
-            gap_df,
-            x='Year',
-            y='Dominance %',
-            markers=True,  # Add dots for each year
-            title='How has the Leader\'s Advantage Changed Over Time?',
-            hover_data=['Leader', 'Runner-Up', 'Leader Citations'], # Hover to see who was #1
-            labels={'Dominance %': 'Lead Margin Over Runner-Up (%)'}
+        # --- VIEW TOGGLE ---
+        view_mode = st.radio(
+            "Select Analysis Mode:",
+            ("Market View (Top 2 Overall)", "Rivalry View (Compare Specific Countries)"),
+            horizontal=True,
+            label_visibility="collapsed"
         )
-        
-        # Styling the line and markers for better visibility
-        fig_gap_line.update_traces(
-            line=dict(color='crimson', width=3),
-            marker=dict(size=8, symbol='diamond')
-        )
-
-        # Adding a baseline for context
-        fig_gap_line.add_hline(y=0, line_dash="dash", line_color="gray", annotation_text="No Gap (Equal Performance)")
-        
-        fig_gap_line.update_layout(height=500, template='plotly_white')
-        st.plotly_chart(fig_gap_line, use_container_width=True)
-
-        # --- Top 5 Table (This is still very useful and kept) ---
         st.markdown("---")
-        st.markdown("##### 🏆 Top 5 Most Dominant Years")
-        top_5_dominance = gap_df.sort_values(by='Dominance %', ascending=False).head(5)
-        display_table = top_5_dominance[['Year', 'Leader', 'Runner-Up', 'Dominance %']].copy()
-        display_table['Dominance %'] = display_table['Dominance %'].apply(lambda x: f"{x:.1f}%")
-        
-        st.dataframe(
-            display_table, 
-            hide_index=True, 
-            use_container_width=True
-        )
+
+        # ==============================================================================
+        # --- MODE 1: MARKET VIEW (Same as before) ---
+        # ==============================================================================
+        if view_mode == "Market View (Top 2 Overall)":
+            st.markdown("##### 1. Market View: Overall Leader's Dominance (Top 2 General)")
+            
+            # Data Prep for Market View
+            gap_data = []
+            years = sorted(df['Year'].unique())
+            for y in years:
+                year_df = df[df['Year'] == y].sort_values(by='Times Cited', ascending=False)
+                if len(year_df) >= 2:
+                    leader, runner = year_df.iloc[0], year_df.iloc[1]
+                    # Formula: ((Leader - Runner) / Runner) * 100
+                    gap_pct = ((leader['Times Cited'] - runner['Times Cited']) / runner['Times Cited']) * 100 if runner['Times Cited'] > 0 else 100
+                    gap_data.append({'Year': y, 'Leader': leader['Country'], 'Runner-Up': runner['Country'], 'Dominance %': gap_pct})
+            
+            gap_df = pd.DataFrame(gap_data)
+
+            # Line Chart Visual
+            fig_gap_line = px.line(gap_df, x='Year', y='Dominance %', markers=True, title='Trend of the Overall Market Leader\'s Advantage', hover_data=['Leader', 'Runner-Up'])
+            fig_gap_line.update_traces(line=dict(color='crimson', width=3), marker=dict(size=8))
+            fig_gap_line.add_hline(y=0, line_dash="dash", line_color="gray", annotation_text="No Gap")
+            fig_gap_line.update_layout(height=500, template='plotly_white', yaxis_title="Lead Margin Over Runner-Up (%)")
+            st.plotly_chart(fig_gap_line, use_container_width=True)
+
+            # Top 5 Table
+            st.markdown("---")
+            st.markdown("##### 🏆 Top 5 Most Dominant Years (Overall Market)")
+            top_5_dominance = gap_df.sort_values(by='Dominance %', ascending=False).head(5)
+            st.dataframe(top_5_dominance.style.format({'Dominance %': '{:.1f}%'}), hide_index=True, use_container_width=True)
+
+        # ==============================================================================
+        # --- MODE 2: RIVALRY TREND VIEW (0-100% Normalized Margin) ---
+        # ==============================================================================
+        else:
+            st.markdown("##### 2. Rivalry Trends: Pairwise Dominance Evolution")
+            
+            # --- WIDGETS ---
+            available_countries = sorted(df['Country'].unique())
+            
+            # --- Safe Default Logic ---
+            preferred_defaults = ['USA', 'INDIA'] 
+            valid_defaults = [country for country in preferred_defaults if country in available_countries]
+
+            if len(valid_defaults) < 2 and len(available_countries) >= 2:
+                valid_defaults = available_countries[:min(3, len(available_countries))]
+            elif len(valid_defaults) == 0:
+                valid_defaults = []
+            
+            selected_countries = st.multiselect(
+                "Select countries to compare dominance trends:", 
+                available_countries, 
+                default=valid_defaults
+            )
+
+            # --- TREND LOGIC ---
+            if len(selected_countries) >= 2:
+                
+                # Filter data for ALL years for selected countries
+                trend_df = df[df['Country'].isin(selected_countries)]
+                
+                if trend_df.empty:
+                    st.warning("No data found for the selected countries.")
+                else:
+                    
+                    # --- DOMINANCE DATA CALCULATION (0-100% Normalized Margin Logic) ---
+                    from itertools import combinations
+                    
+                    dominance_data = []
+                    all_years = sorted(trend_df['Year'].unique())
+                    
+                    for yr in all_years:
+                        yr_data = trend_df[trend_df['Year'] == yr]
+                        citations_map = yr_data.set_index('Country')['Times Cited'].to_dict()
+                        
+                        for c1, c2 in combinations(selected_countries, 2):
+                            if c1 in citations_map and c2 in citations_map:
+                                val1 = citations_map[c1]
+                                val2 = citations_map[c2]
+                                
+                                total = val1 + val2
+
+                                # Determine Leader and Runner-up for the pair in this year
+                                if val1 >= val2:
+                                    leader_val = val1
+                                    runner_val = val2
+                                    leader_name = c1
+                                    runner_name = c2
+                                else:
+                                    leader_val = val2
+                                    runner_val = val1
+                                    leader_name = c2
+                                    runner_name = c1
+                                
+                                # Calculate Normalized Margin (Always positive, 0-100%)
+                                # Formula: |(Leader - Runner) / (Leader + Runner)| * 100
+                                if total > 0:
+                                    # Since leader_val >= runner_val, the difference is always positive.
+                                    dom_pct = ((leader_val - runner_val) / total) * 100
+                                else:
+                                    # If both zero, margin is zero
+                                    dom_pct = 0.0 
+
+                                dominance_data.append({
+                                    'Year': yr,
+                                    'Pair': f"{c1} vs {c2}", 
+                                    'Dominance %': dom_pct, # This is the Normalized Margin (0-100)
+                                    'Leader': leader_name, 
+                                    'Runner-Up': runner_name
+                                })
+                    
+                    # Plot if data exists
+                    if dominance_data:
+                        dom_df = pd.DataFrame(dominance_data)
+                        
+                        # --- VISUAL 1: LINE CHART (0-100% Normalized Margin) ---
+                        st.markdown("###### ⚔️ Dominance Trend: Normalized Competition Margin (%)")
+                        
+                        fig_dom_trend = px.line(
+                            dom_df,
+                            x='Year',
+                            y='Dominance %',
+                            color='Pair',
+                            markers=True,
+                            hover_data={'Dominance %': ':.1f', 'Leader': True, 'Runner-Up': True},
+                            title='Normalized Margin (0-100%): How wide is the citation gap?',
+                            template='plotly_white'
+                        )
+                        # Add line for 0% (Equal share)
+                        fig_dom_trend.add_hline(y=0, line_dash="dash", line_color="black", annotation_text="Equal Impact (0% Gap)")
+                        fig_dom_trend.update_layout(
+                            height=450, 
+                            yaxis_title="Normalized Dominance Margin (%)",
+                            yaxis=dict(range=[0, 100]) # Enforce 0-100% range
+                        )
+                        st.plotly_chart(fig_dom_trend, use_container_width=True)
+                        
+                        st.caption("""
+                        ℹ️ **How to read this chart:** - **Value**: Represents the **Normalized Percentage Margin** by which the **Leader** is ahead of the **Runner-Up** (relative to their combined total).
+                        - **0%**: Equal citation volume (Tied).
+                        - **100%**: Absolute dominance (One country has all citations in the pair).
+                        - **Leader/Runner-Up**: Hover to see which country holds the leading position in that specific year for that pair.
+                        """)
+                        
+                        # --- VISUAL 2: TOP 5 DOMINANCE TABLE (0-100% Normalized Margin) ---
+                        st.markdown("---")
+                        st.markdown("##### 🏆 Top 5 Instances of Dominance (Largest Normalized Margin)")
+
+                        # Since Dominance % is the normalized margin (always 0-100), we just sort by it.
+                        top_5_dominance = dom_df.sort_values(by='Dominance %', ascending=False).head(5)
+                        
+                        top_5_display = top_5_dominance[['Year', 'Pair', 'Leader', 'Runner-Up', 'Dominance %']].copy()
+                        top_5_display['Normalized Margin (%)'] = top_5_display['Dominance %']
+                        
+                        st.dataframe(
+                            top_5_display[['Year', 'Leader', 'Runner-Up', 'Pair', 'Normalized Margin (%)']].style.format({'Normalized Margin (%)': '{:.1f}%'}), 
+                            hide_index=True, 
+                            use_container_width=True
+                        )
+
+                    else:
+                        st.info("Insufficient overlapping data to calculate dominance trends for the selected combinations.")
+
+            else:
+                st.warning("Please select at least two countries to generate the trend comparison.")
 
 # "🚨5. Outlier Analysis"
     with tab5: 
