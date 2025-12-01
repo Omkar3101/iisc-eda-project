@@ -217,14 +217,15 @@ if df is not None:
             st.caption("ℹ️ **Note:** The curve is flat, meaning research power is shared among many nations, not hoarded by just one.")
 
 # "🗺️2. Strategic Positioning"
+    # --- TAB 2: STRATEGIC POSITIONING (IMPROVED) ---
     with tab2:
         st.markdown("""
         <div class="insight-box orange-box">
-            <h4>⚖️ Insight 2: Strategy & The Collaboration Myth</h4>
+            <h4>🗺️ Insight 2: Strategic Positioning & The Collaboration Myth</h4>
             <p>This deep dive first maps each nation's research strategy and then investigates a key differentiator: Does better collaboration lead to more "Blockbuster" papers?</p>
             <ul>
-                <li><b>The Four Models (Left Chart):</b> Nations are segmented into strategic quadrants like "Mass Producers" (e.g., UK) and "Boutique" specialists (e.g., Japan).</li>
-                <li><b>The Collaboration Myth (Right Chart):</b> Contrary to belief, for these top-tier nations, better collaboration quality shows <b>zero correlation</b> with producing more elite (Top 1%) papers. Collaboration is a baseline requirement, not a competitive advantage.</li>
+                <li><b>The Four Models (Left Chart):</b> Nations are segmented into strategic quadrants. The bubble color now indicates their average collaboration quality.</li>
+                <li><b>The Collaboration Myth (Right Chart):</b> Contrary to belief, for these top-tier nations, better collaboration quality shows <b>zero correlation</b> with producing more elite (Top 1%) papers, as proven by the flat red trendline.</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
@@ -232,11 +233,11 @@ if df is not None:
         # Create two columns for the charts
         col1, col2 = st.columns(2)
 
-        # --- LEFT CHART: STRATEGY MATRIX ---
+        # --- LEFT CHART: STRATEGY MATRIX (IMPROVED) ---
         with col1:
             st.markdown("##### 1. The Four Strategic Models")
             
-            # Data prep for Quadrant chart
+            # Data prep
             overall_df = df.groupby('Country').agg({
                 'Documents': 'sum', 'Times Cited': 'sum', 'CNCI': 'mean', 'Collab-CNCI': 'mean'
             }).reset_index()
@@ -244,80 +245,82 @@ if df is not None:
             median_cnci = overall_df['CNCI'].median()
 
             fig_quad = px.scatter(
-                overall_df, x='Documents', y='CNCI', size='Times Cited', color='CNCI',
-                hover_name='Country', log_x=True, 
-                color_continuous_scale='Viridis', height=500, text='Country'
+                overall_df, 
+                x='Documents', 
+                y='CNCI', 
+                size='Times Cited', 
+                # IMPROVEMENT: Color is now by a third variable, not the Y-axis
+                color='Collab-CNCI', 
+                hover_name='Country', 
+                log_x=True, 
+                color_continuous_scale='Plasma', 
+                height=550
             )
-            fig_quad.add_vline(x=median_docs, line_dash="dash", line_color="red")
-            fig_quad.add_hline(y=median_cnci, line_dash="dash", line_color="red")
-            fig_quad.update_traces(textposition='top center')
+            fig_quad.add_vline(x=median_docs, line_dash="dash", line_color="gray")
+            fig_quad.add_hline(y=median_cnci, line_dash="dash", line_color="gray")
             
-            # 1. Elite Players (Top-Right)
-            fig_quad.add_annotation(
-                xref="paper", yref="paper",
-                x=0.98, y=0.98,  
-                text="<b>CONSISTENT ELITE</b><br>(High Qty / High Qual)",
-                showarrow=False, font=dict(size=13, color="green"),
-                xanchor="right", yanchor="top"
+            # IMPROVEMENT: Cleaner annotations
+            annotations = {
+                "🏆 ELITE": (0.98, 0.98, "green"),
+                "🏭 MASS PRODUCER": (0.98, 0.02, "orange"),
+                "💎 BOUTIQUE": (0.02, 0.98, "blue"),
+                "🔻 LAGGING": (0.02, 0.02, "grey")
+            }
+            for text, (x, y, color) in annotations.items():
+                fig_quad.add_annotation(
+                    xref="paper", yref="paper", x=x, y=y, text=f"<b>{text}</b>",
+                    showarrow=False, font=dict(color=color, size=12),
+                    xanchor='right' if x > 0.5 else 'left', yanchor='top' if y > 0.5 else 'bottom'
+                )
+
+            fig_quad.update_layout(
+                xaxis_title="Total Documents (Log Scale)", 
+                yaxis_title="Average Quality (CNCI)", 
+                margin=dict(l=0, r=0, t=30, b=0),
+                coloraxis_colorbar_title_text='Collab<br>Quality'
             )
-
-            # 2. Mass Producers (Bottom-Right)
-            fig_quad.add_annotation(
-                xref="paper", yref="paper",
-                x=0.98, y=0.02,  
-                text="<b>MASS PRODUCERS</b><br>(High Qty / Low Qual)",
-                showarrow=False, font=dict(size=12, color="orange"),
-                xanchor="right", yanchor="bottom"
-            )
-
-            # 3. Niche Players (Top-Left)
-            fig_quad.add_annotation(
-                xref="paper", yref="paper",
-                x=0.02, y=0.98,  
-                text="<b>NICHE / BOUTIQUE</b><br>(Low Qty / High Qual)",
-                showarrow=False, font=dict(size=12, color="blue"),
-                xanchor="left", yanchor="top"
-            )
-
-            # 4. Underperformers (Bottom-Left)
-            fig_quad.add_annotation(
-                xref="paper", yref="paper",
-                x=0.02, y=0.02,  
-                text="<b>LAGGING</b><br>(Low Qty / Low Qual)",
-                showarrow=False, font=dict(size=12, color="gray"),
-                xanchor="left", yanchor="bottom"
-            )
-
-
-            fig_quad.update_layout(xaxis_title="Total Documents (Log)", yaxis_title="Avg Quality (CNCI)", margin=dict(l=0, r=0, t=30, b=0), coloraxis_showscale=False)
-            
             st.plotly_chart(fig_quad, use_container_width=True)
 
-        # --- RIGHT CHART: ELITE CONVERSION (COLLABORATION IMPACT) ---
+        # --- RIGHT CHART: COLLABORATION MYTH (IMPROVED) ---
         with col2:
             st.markdown("##### 2. The Collaboration Myth")
             
-            # Data prep for Elite Conversion chart
-            elite_data = df.groupby('Country')[['Collab-CNCI', '% Documents in Top 1%', 'Documents', 'CNCI']].mean().reset_index()
-            elite_data = elite_data[elite_data['% Documents in Top 1%'] > 0]
+            # Data prep
+            elite_data = df.groupby('Country')[['Collab-CNCI', '% Documents in Top 1%']].mean().reset_index()
             
+            # Calculate correlation to display on chart
+            correlation = elite_data['Collab-CNCI'].corr(elite_data['% Documents in Top 1%'])
+
+            # IMPROVEMENT: Simplified to a clean scatter plot to highlight the trend
             fig_elite = px.scatter(
                 elite_data,
                 x='Collab-CNCI',
                 y='% Documents in Top 1%',
-                size='Documents',
-                color='CNCI',
                 hover_name='Country',
-                trendline="ols",
-                color_continuous_scale='Plasma',
-                text='Country'
+                trendline="ols"
             )
-            fig_elite.update_traces(marker=dict(opacity=0.8))
+            
+            # IMPROVEMENT: Style the trendline to be the hero of the chart
+            fig_elite.update_traces(
+                selector=dict(mode='lines'), 
+                line=dict(color='red', width=3, dash='solid')
+            )
+            fig_elite.update_traces(
+                selector=dict(mode='markers'),
+                marker=dict(opacity=0.6, color='#636EFA')
+            )
+            
+            # IMPROVEMENT: Add the correlation value directly on the chart
+            fig_elite.add_annotation(
+                xref="paper", yref="paper", x=0.95, y=0.05,
+                text=f"<b>Pearson's r = {correlation:.2f}</b>",
+                showarrow=False, font=dict(size=14, color="red")
+            )
+            
             fig_elite.update_layout(
-                height=500,
-                xaxis_title="Avg Collaboration Quality",
-                yaxis_title="Avg % in Top 1%",
-                coloraxis_showscale=False,
+                height=550,
+                xaxis_title="Average Collaboration Quality",
+                yaxis_title="Average % in Top 1%",
                 margin=dict(l=0, r=0, t=30, b=0)
             )
             
