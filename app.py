@@ -447,7 +447,6 @@ if df is not None:
             horizontal=True,
             label_visibility="collapsed"
         )
-        st.markdown("---")
 
         # ==============================================================================
         # --- MODE 1: MARKET VIEW (UPDATED TO 0-100% SCALE) ---
@@ -868,7 +867,6 @@ if df is not None:
             horizontal=True,
             label_visibility="collapsed"
         )
-        st.markdown("---")
 
         # --- 2. LOGIC & VISUALIZATION ---
         
