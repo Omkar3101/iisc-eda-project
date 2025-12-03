@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
-from itertools import combinations  # <--- YAHAN MISSING THA, MAINE ADD KAR DIYA HE
+from itertools import combinations 
 
 # -----------------------------------------------------------------------------
 # 1. PAGE CONFIGURATION
@@ -134,7 +134,6 @@ if df is not None:
         "📈 Performance Trends"
     ])
 
-    # ... (Tab 1 remains same) ...
     with tab1:
         st.markdown("""
         <div class="insight-box blue-box">
@@ -379,7 +378,6 @@ if df is not None:
             st.dataframe(top_5_years, use_container_width=True)
 
 # "⚔️4. Competitive Landscape"
-    # "⚔️4. Competitive Landscape"
     with tab4: 
         st.markdown("""
         <div class="insight-box orange-box">
@@ -635,7 +633,6 @@ if df is not None:
             st.plotly_chart(fig_strong, use_container_width=True)
 
 # "📈7. Performance Trends" 
-    # "📈7. Performance Trends"
     with tab7:
         st.markdown("""
         <div class="insight-box green-box">
