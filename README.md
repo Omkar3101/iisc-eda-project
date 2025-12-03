@@ -128,6 +128,4 @@ The application should now be running at `http://localhost:8501`.
 └── README.md                     # Project Documentation
 ```
 
----
 **Author:** Omkar Sharma | [LinkedIn](https://www.linkedin.com/in/omkar3101) | [Email](mailto:omkarshar3101@gmail.com)
-```
