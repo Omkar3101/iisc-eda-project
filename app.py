@@ -599,7 +599,7 @@ if df is not None:
             <ul>
                 <li><b>The Quality Ceiling:</b> CNCI shows <b>zero statistical outliers</b>. This proves that while nations can force scale, they cannot engineer "abnormally high" average quality—it hits a natural ceiling.</li>
                 <li><b>Volume Spikes:</b> In contrast, Documents and Times Cited show 6 distinct outliers, driven by "Hyper-production" years from <b>Italy (2004)</b> and <b>China (2007)</b>.</li>
-                <li><b>Elite Spikes:</b> The % Top 1% metric shows 5 outliers, with historical peaks from <b>Canada (2013)</b> and <b>USA (2003)</b>.</li>
+                <li><b>Elite Spikes:</b> The % Top 1% metric shows 5 outliers, with historical down from <b>Canada (2013)</b> and <b>USA (2003)</b>.</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
