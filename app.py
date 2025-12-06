@@ -6,7 +6,7 @@ import numpy as np
 from itertools import combinations 
 
 # -----------------------------------------------------------------------------
-# 1. PAGE CONFIGURATION
+# PAGE CONFIGURATION
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Global Research Performance Analytics",
@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ( All CSS is in ONE block at the top) ---
+# --- CSS ---
 st.markdown("""
 <style>
     /* --- Insight Box Styles --- */
@@ -27,7 +27,6 @@ st.markdown("""
     .orange-box { background-color: #fff3e0; border-color: #ff9800; }
     .purple-box { background-color: #f3e5f5; border-color: #9c27b0; }
     .red-box { background-color: #ffebee; border-color: #ef5350; }
-    
     div[data-testid="stMetricValue"] { font-size: 24px; }
 
     /* --- Sticky Tabs --- */
@@ -37,7 +36,6 @@ st.markdown("""
         padding-top: 1rem; padding-bottom: 1rem;
         border-bottom: 1px solid #e6e6e6;
     }
-    
     header[data-testid="stHeader"] { z-index: 1000; }
 
     /* --- Cover Image --- */
@@ -50,72 +48,43 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 2. DATA LOADING
+# DATA LOADING
 # -----------------------------------------------------------------------------
-@st.cache_data
-def create_dummy_data():
-    """Generates sample data if CSV is missing"""
-    countries = ['USA', 'China', 'UK', 'Germany', 'India', 'Japan', 'France', 'Italy', 'Canada', 'Australia', 'Brazil', 'Spain', 'South Korea', 'Netherlands', 'Russia']
-    years = [2018, 2019, 2020, 2021, 2022]
-    data = []
-    
-    for country in countries:
-        base_quality = np.random.uniform(0.8, 1.8)
-        for year in years:
-            docs = np.random.randint(500, 20000)
-            if country in ['USA', 'China']: docs *= 5
-            
-            cnci = base_quality + np.random.normal(0, 0.1)
-            times_cited = int(docs * cnci * np.random.uniform(5, 15))
-            collab_cnci = cnci * np.random.uniform(0.9, 1.3)
-            
-            data.append([country, year, docs, times_cited, cnci, collab_cnci, np.random.uniform(40, 90)])
-            
-    return pd.DataFrame(data, columns=['Country', 'Year', 'Documents', 'Times Cited', 'CNCI', 'Collab-CNCI', '% Docs Cited', '% Documents in Top 1%'])
-
 @st.cache_data
 def load_data():
     try:
-        # Note: Added logic to handle missing col if using dummy data logic fully
         df = pd.read_csv('data/cleaned_publications.csv')
         return df
     except FileNotFoundError:
-        st.warning("⚠️ 'cleaned_publications.csv' not found. Using Generated Demo Data.")
-        df = create_dummy_data()
-        # Dummy data fix for Top 1% column if it was missing in generator
-        if '% Documents in Top 1%' not in df.columns:
-             df['% Documents in Top 1%'] = df['CNCI'] * np.random.uniform(0.5, 1.5)
-        return df
-
+        st.warning("⚠️ 'cleaned_publications.csv' not found.")
 df = load_data()
 
 # -----------------------------------------------------------------------------
-# 3. MAIN DASHBOARD LOGIC
+# MAIN DASHBOARD LOGIC
 # -----------------------------------------------------------------------------
 if df is not None:
-    
     # Cover Image
     st.markdown('<div class="cover-image"></div>', unsafe_allow_html=True)
 
     # Title and Subheading
     st.title("🔬 Global Research Performance Analytics")
     st.markdown("##### *Project Intern/Trainee Hiring Assessment - PAIU-OPSA, IISc Bangalore*")
-    st.markdown("---")
 
     #Side Bar
     with st.sidebar:
+        # About 
         st.header("About")
         st.markdown("""
-        This dashboard presents an in-depth analysis of global research performance metrics, developed as part of a hiring assessment for IISc Bangalore.
+        This dashboard presents an in-depth analysis of global research performance metrics, developed as part of a hiring assessment for PAIU-OPSA, IISc Bangalore.
         """)
-        
         st.markdown("---")
         
+        # GitHub Link
         st.header("Project Resources")
         st.markdown("🔗 [View Source Code on GitHub](https://github.com/Omkar3101/iisc-eda-project)")
-        
         st.markdown("---")
         
+        # About Me
         st.header("Author")
         st.markdown("""
         **Omkar Sharma**
@@ -134,15 +103,16 @@ if df is not None:
         "📈 7. Performance Trends"
     ])
 
-# "📊 1. Overview & Key Findings"
+    # "📊 1. Overview & Key Findings"
     with tab1:
-        st.markdown("""
+        # --- Step-1 : Insight Box ---
+        st.markdown(f"""
         <div class="insight-box blue-box">
             <h4>🔍 Insight 1: The 'Elite Club' & Decentralized Power</h4>
             <p>This initial analysis reveals two fundamental truths about our dataset: high performance is the norm, and power is highly decentralized.</p>
             <ul>
                 <li>
-                    <b>Pareto Principle Fails:</b> The traditional 80/20 rule is inverted. It takes approximately <b>75% of nations to generate 80% of the total research impact</b>. This indicates a balanced and highly competitive field where power is not monopolized by a few giants.
+                    <b>Pareto Principle Fails:</b> The traditional 80/20 rule is inverted. It takes approximately <b>75% of nations to generate 80% of the total research impact.</b> This indicates a balanced and highly competitive field where power is not monopolized by a few giants.
                 </li>
                 <li>
                     <b>High Performance Norm:</b> Every country's long-term average quality (CNCI) is above the global standard. Underperformance is a rare anomaly, not a systemic weakness.
@@ -151,143 +121,271 @@ if df is not None:
         </div>
         """, unsafe_allow_html=True)
 
+        # --- Step 2 : Metric Selection Drop Down ---
+        st.markdown(" ##### Select Metric for Analysis ")
+        METRICS_MAP = {
+            "% Docs Cited (Relevance)": '% Docs Cited',
+            "% Top 1% Documents (Excellence)": '% Documents in Top 1%',
+            "CNCI (Quality)": 'CNCI',
+            "Collab-CNCI (Collab Quality)": 'Collab-CNCI',
+            "Documents (Volume)": 'Documents',
+            "Times Cited (Impact)": 'Times Cited'
+        }
+        selected_metric_label = st.selectbox(
+            "Choose a metric to update both charts below:",
+            list(METRICS_MAP.keys()),
+            index=2 # <-- Default CNCI
+        )
+        selected_col = METRICS_MAP[selected_metric_label]
+
         col1, col2 = st.columns(2)
 
-        # --- VISUAL 1: STRIP PLOT ---
+        # --- Step 3 : Visual 1 - Strip Plot ---
         with col1:
-            st.markdown("#### 1. Consistency Check (Granular View)")
+            st.markdown(f"#### 1. Consistency Check: {selected_metric_label}") # <-- title for visual 1
             
-            df['Benchmark Status'] = df['CNCI'].apply(lambda x: 'Below Average (< 1.0)' if x < 1.0 else 'Above Average (>= 1.0)')
-            below_count = len(df[df['CNCI'] < 1.0])
-            
-            st.metric("Rare Failures ( < 1.0)", f"{below_count} / {len(df)} Rows", delta="Anomalies", delta_color="inverse")
+            baseline_metrics = ['CNCI', 'Collab-CNCI', '% Documents in Top 1%'] # <-- metrics which has global baseline
 
+            # Seperate Global Baseline
+            if selected_col in baseline_metrics:
+                # Case 1: Quality/Percentage Metrics -> Use 1.0 as Threshold
+                threshold_val = 1.0
+                threshold_name = "Global Baseline"
+                label_below = "Below Baseline (< 1.0)"
+                label_above = "Above Baseline (>= 1.0)"
+            else:
+                # Case 2: Volume/Count Metrics -> Use Median as Threshold
+                threshold_val = df[selected_col].median()
+                threshold_name = "Global Median"
+                label_below = f"Below Median (< {threshold_val:.2f})"
+                label_above = f"Above Median (>= {threshold_val:.2f})"
+            
+            # Apply Logic to Dataframe
+            df['Benchmark Status'] = df[selected_col].apply(
+                lambda x: label_below if x < threshold_val else label_above
+            )
+            
+            # Count failures
+            below_count = len(df[df[selected_col] < threshold_val])
+            st.metric(
+                f"Years Below {threshold_name}", 
+                f"{below_count} / {len(df)} Rows", 
+                delta="Low Performance Count", 
+                delta_color="inverse"
+            )
+
+            # Create Strip Plot
             fig_strip = px.strip(
                 df, 
-                y='CNCI', 
+                y=selected_col, 
                 x='Country', 
                 color='Benchmark Status', 
-                color_discrete_map={'Below Average (< 1.0)': '#EF553B', 'Above Average (>= 1.0)': '#636EFA'},
-                hover_data=['Year', 'CNCI'], 
-                title='Granular Check: Structural Strength vs Occasional Dips',
+                color_discrete_map={   # <-- Map dynamic color
+                    label_below: '#EF553B', 
+                    label_above: '#636EFA'
+                },
+                hover_data=['Year', selected_col], 
+                title=f'Consistency Check vs {threshold_name}',
                 template='plotly_white'
             )
-            fig_strip.add_hline(y=1.0, line_dash="dash", line_color="black", annotation_text="Global Baseline")
+            
+            # Add the Threshold Line (Dynamic)
+            fig_strip.add_hline(
+                y=threshold_val, 
+                line_dash="dash", 
+                line_color="black", 
+                annotation_text=f"{threshold_name} ({threshold_val:.2f})"
+            )
             fig_strip.update_layout(height=450)
             st.plotly_chart(fig_strip, use_container_width=True)
             
-            st.caption("ℹ️ **Note:** Each dot is a specific **Year**. While every country passes on average, the red dots show rare years where they slipped.")
+            st.caption(f"ℹ️ **Note:** Red dots indicate years where performance dropped below the **{threshold_name}**.")
 
-        # --- VISUAL 2: PARETO CHART ---
+        # --- Step 4 : VISUAL 2 - Pareto Chart ---
         with col2:
-            st.markdown("#### 2. Power Concentration (Pareto)")
+            st.markdown(f"#### 2. Concentration Analysis (Pareto): {selected_metric_label}") # <-- title for visual 2
             
-            pareto_df = df.groupby('Country')['Times Cited'].sum().reset_index()
-            pareto_df = pareto_df.sort_values(by='Times Cited', ascending=False).reset_index(drop=True)
-            
-            total_citations = pareto_df['Times Cited'].sum()
-            pareto_df['Cumulative_Cit_Perc'] = (pareto_df['Times Cited'].cumsum() / total_citations) * 100
-            pareto_df['Entity_Perc'] = ((pareto_df.index + 1) / len(pareto_df)) * 100
-            
+            # Create Dataframe for Pareto Chart
+            pareto_df = df.groupby('Country')[selected_col].sum().reset_index() # <-- agg. selected col. according to country
+            pareto_df = pareto_df.sort_values(by=selected_col, ascending=False).reset_index(drop=True) # <-- put in desc.
+
+            total_val = pareto_df[selected_col].sum()  # <-- sum of all values
+            pareto_df['Cumulative_Perc'] = (pareto_df[selected_col].cumsum() / total_val) * 100 # <-- get commulative pct.
+            pareto_df['Entity_Perc'] = ((pareto_df.index + 1) / len(pareto_df)) * 100 # <-- get entity pct.
+
+
             try:
-                cutoff_row = pareto_df[pareto_df['Cumulative_Cit_Perc'] >= 80].iloc[0]
-                cutoff_perc = cutoff_row['Entity_Perc']
+                cutoff_row = pareto_df[pareto_df['Cumulative_Perc'] >= 80].iloc[0]  # <-- get row where cumm >= 80
+                cutoff_perc = cutoff_row['Entity_Perc'] # <-- get entity pct where cumm >= 80
             except IndexError:
                 cutoff_perc = 100
 
-            st.metric("Entities needed for 80% Impact", f"{cutoff_perc:.1f}%", delta="Pareto Principle Failed", delta_color="off")
+            # Add logic for result
+            status_delta = "High Concentration (Monopoly)" if cutoff_perc <= 20 else "Distributed (Competitive)"
+            delta_col = "inverse" if cutoff_perc <= 20 else "off"
+
+            # Show result
+            st.metric(
+                "Entities needed for 80% Total Value", 
+                f"{cutoff_perc:.1f}%", 
+                delta=status_delta, 
+                delta_color=delta_col
+            )
             
+            # Create Pareto Chart
             fig_pareto = go.Figure()
-            fig_pareto.add_trace(go.Bar(
-                x=pareto_df['Country'], y=pareto_df['Times Cited'], name='Citations', marker_color='#ced4da'
+            fig_pareto.add_trace(go.Bar( # <-- create bar
+                x=pareto_df['Country'], y=pareto_df[selected_col], name='Value', marker_color='#ced4da'
             ))
-            fig_pareto.add_trace(go.Scatter(
-                x=pareto_df['Country'], y=pareto_df['Cumulative_Cit_Perc'],
+            fig_pareto.add_trace(go.Scatter( # <-- create trend line
+                x=pareto_df['Country'], y=pareto_df['Cumulative_Perc'],
                 mode='lines+markers', name='Cumulative %', yaxis='y2', line=dict(color='#ef553b', width=3)
             ))
 
             fig_pareto.update_layout(
-                title='Lorenz Curve: Impact is Distributed, Not Monopolized',
-                yaxis=dict(title='Total Citations'),
+                title=f'Lorenz Curve: {selected_metric_label}',
+                yaxis=dict(title=f'Total {selected_metric_label}'),
                 yaxis2=dict(title='Cumulative %', overlaying='y', side='right', range=[0, 110]),
                 hovermode='x unified',
                 height=450,
                 showlegend=False
             )
+
             fig_pareto.add_hline(y=80, line_dash="dash", line_color="green", yref="y2", annotation_text="80% Threshold")
             st.plotly_chart(fig_pareto, use_container_width=True)
             
-            st.caption("ℹ️ **Note:** The curve is flat, meaning research power is shared among many nations, not hoarded by just one.")
+            st.caption("ℹ️ **Interpretation:** A steep red line rising quickly means a few countries hold all the power.")
 
-# "🗺️2. Strategic Positioning"
+    # "🗺️2. Strategic Positioning"
     with tab2:
-        st.markdown("""
+        # --- Step 1 : Insight Box ---
+        st.markdown(f"""
         <div class="insight-box orange-box">
-            <h4>🗺️ Insight 2: Strategic Divergence (The Four Models)</h4>
+            <h4> Insight 2: Strategic Divergence (The Four Models)</h4>
             <p>Nations are positioned into four distinct strategic quadrants relative to the global median:</p>
             <ul>
-                <li><b>The Mass Producer:</b> Led by the <b>UK</b> (Volume > Median, Quality < Median). High volume but lowest average CNCI among peers.</li>
-                <li><b>The Boutique Specialist:</b> Led by <b>Japan</b> (Quality > Median, Volume < Median). Highest CNCI score despite lower volume.</li>
-                <li><b>The Elite Performer:</b> Led by <b>Spain</b> (Both > Median). Represents the ideal strategy of high volume and high quality.</li>
-                <li><b>The Catch-up Zone:</b> The <b>Netherlands</b> falls here, trailing in both metrics.</li>
+                <li><b>The Mass Producer:</b> Led by the UK (Volume > Median, Quality < Median). High volume but lowest average CNCI among peers.</li>
+                <li><b>The Boutique Specialist:</b> Led by Japan (Quality > Median, Volume < Median). Highest CNCI score despite lower volume.</li>
+                <li><b>The Elite Performer:</b> Led by Spain (Both > Median). Represents the ideal strategy of high volume and high quality.</li>
+                <li><b>The Catch-up Zone:</b> The Netherlands falls here, trailing in both metrics.</li>
             </ul>
             <hr>
-            <p class="mb-0"><b>🇮🇳 India Watch:</b> India sits in the "Catch-up Zone" but is positioned <b>critically close to the median lines</b> for both Volume and CNCI. This indicates that India is not lagging significantly but is in a transition phase, growing simultaneously in quantity and quality to cross into the Elite quadrant.</p>
+            <p><b>🇮🇳 India Watch:</b> India sits in the "Catch-up Zone" but is positioned critically close to the median lines for both Volume and CNCI. This indicates that India is not lagging significantly but is in a transition phase, growing simultaneously in quantity and quality to cross into the Elite quadrant.</p>
         </div>
         """, unsafe_allow_html=True)
-        
-        # --- STRATEGY MATRIX (Full Width) ---
-        st.markdown("##### The Strategic Landscape: Volume vs. Quality Matrix")
-        
-        # Data Prep
-        overall_df = df.groupby('Country').agg({
-            'Documents': 'sum', 'Times Cited': 'sum', 'CNCI': 'mean', 'Collab-CNCI': 'mean'
-        }).reset_index()
-        median_docs = overall_df['Documents'].median()
-        median_cnci = overall_df['CNCI'].median()
 
-        # Visual - Now Full Width
+        # --- Step 2 : Create Metric Drop Down ---
+        st.markdown("##### Select Metric for Analysis")
+        st.markdown("Explore how countries position themselves based on different performance metrics. Use the dropdowns to change the axes.")
+
+        STRATEGY_METRICS = {
+            "% Docs Cited (Relevance)": '% Docs Cited',
+            "% Top 1% Documents (Excellence)": '% Documents in Top 1%',
+            "CNCI (Quality)": 'CNCI',
+            "Collab-CNCI (Collab Quality)": 'Collab-CNCI',
+            "Documents (Volume)": 'Documents',
+            "Times Cited (Impact)": 'Times Cited'
+        }
+        
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            x_label = st.selectbox(
+                "Select X-Axis Metric:", 
+                list(STRATEGY_METRICS.keys()), 
+                index=4, # <-- Default: Documents
+                key="strat_x"
+            )
+            x_col = STRATEGY_METRICS[x_label]
+            
+        with c2:
+            y_label = st.selectbox(
+                "Select Y-Axis Metric:", 
+                list(STRATEGY_METRICS.keys()), 
+                index=2, # <-- Default: CNCI
+                key="strat_y"
+            )
+            y_col = STRATEGY_METRICS[y_label]
+
+        # --- Step 3 : Data Preparation ---
+        # Define how to aggregate different columns
+        agg_rules = {
+            'Documents': 'sum', 
+            'Times Cited': 'sum', 
+            'CNCI': 'mean', 
+            'Collab-CNCI': 'mean',
+            '% Docs Cited': 'mean',
+            '% Documents in Top 1%': 'mean' 
+        }
+        
+        # Group by Country
+        overall_df = df.groupby('Country').agg(agg_rules).reset_index()
+
+        # Calculate Medians for the Quadrants
+        median_x = overall_df[x_col].median()
+        median_y = overall_df[y_col].median()
+
+
+        # --- Step 4 : Visualisation --- 
+        # Determine if Log Scale is needed (Only for large numbers)
+        log_x_bool = True if x_col in ['Documents', 'Times Cited'] else False
+        log_y_bool = True if y_col in ['Documents', 'Times Cited'] else False
+
+
+        st.markdown(f" #### Strategic Position : {x_label} vs {y_label}") # <-- Title of Scatter Plot
+
+        # Create Scatter Plot
         fig_quad = px.scatter(
             overall_df, 
-            x='Documents', 
-            y='CNCI', 
-            size='Times Cited', 
-            color='Collab-CNCI', 
-            hover_name='Country', 
-            log_x=True, 
+            x=x_col, 
+            y=y_col, 
+            size='Documents', # <-- Bubble size to show volume
+            color='Collab-CNCI', # <-- Bubble color to show Collab-CNCI
+            hover_name='Country',
+            hover_data=['Times Cited', 'CNCI'],
+            log_x=log_x_bool,
+            log_y=log_y_bool,
             color_continuous_scale='Plasma', 
-            height=600 # Thoda bada kar diya kyunki ab full width hai
+            height=600
         )
         
         # Add Median Lines (Quadrants)
-        fig_quad.add_vline(x=median_docs, line_dash="dash", line_color="gray", annotation_text="Median Volume")
-        fig_quad.add_hline(y=median_cnci, line_dash="dash", line_color="gray", annotation_text="Median Quality")
+        fig_quad.add_vline(x=median_x, line_dash="dash", line_color="gray", annotation_text=f"Median {x_col}")
+        fig_quad.add_hline(y=median_y, line_dash="dash", line_color="gray", annotation_text=f"Median {y_col}")
         
-        # Annotations for Quadrants
-        annotations = {
-            "🏆 ELITE": (0.98, 0.98, "green"),
-            "🏭 MASS PRODUCER": (0.98, 0.02, "orange"),
-            "💎 BOUTIQUE": (0.02, 0.98, "blue"),
-            "🔻 LAGGING": (0.02, 0.02, "grey")
-        }
-        for text, (x, y, color) in annotations.items():
-            fig_quad.add_annotation(
-                xref="paper", yref="paper", x=x, y=y, text=f"<b>{text}</b>",
-                showarrow=False, font=dict(color=color, size=14),
-                xanchor='right' if x > 0.5 else 'left', yanchor='top' if y > 0.5 else 'bottom'
-            )
+        # Dynamic Quadrant Annotation
+        fig_quad.add_annotation(
+            xref="paper", yref="paper", x=0.98, y=0.98, text="<b>LEADERS</b><br>(High X & High Y)",
+            showarrow=False, font=dict(color="green", size=12), xanchor='right', yanchor='top'
+        )
+        fig_quad.add_annotation(
+            xref="paper", yref="paper", x=0.98, y=0.02, text=f"<b>{x_col} DRIVEN</b><br>(High X / Low Y)",
+            showarrow=False, font=dict(color="orange", size=12), xanchor='right', yanchor='bottom'
+        )
+        fig_quad.add_annotation(
+            xref="paper", yref="paper", x=0.02, y=0.98, text=f"<b>{y_col} DRIVEN</b><br>(Low X / High Y)",
+            showarrow=False, font=dict(color="blue", size=12), xanchor='left', yanchor='top'
+        )
+        fig_quad.add_annotation(
+            xref="paper", yref="paper", x=0.02, y=0.02, text="<b>DEVELOPING</b><br>(Low X & Low Y)",
+            showarrow=False, font=dict(color="grey", size=12), xanchor='left', yanchor='bottom'
+        )
 
         fig_quad.update_layout(
-            xaxis_title="Total Documents (Log Scale)", 
-            yaxis_title="Average Quality (CNCI)", 
-            margin=dict(l=0, r=0, t=30, b=0),
+            xaxis_title=x_label, 
+            yaxis_title=y_label, 
+            margin=dict(l=0, r=0, t=40, b=0),
             coloraxis_colorbar_title_text='Collab<br>Quality',
             template="plotly_white"
         )
+        
         st.plotly_chart(fig_quad, use_container_width=True)
+        
+        st.caption(f"ℹ️ **Note:** Bubble Size = Total Documents. Color = Collab-CNCI Score. Axes Medians are calculated from country-level aggregates.")
 
 # "🎯3. Distribution Analysis"
     with tab3: 
+        # --- Step 1 : Create Insight Box ---
         st.markdown("""
         <div class="insight-box blue-box">
             <h4>🎯 Insight 3: Distribution Analysis (Symmetry vs. Skew)</h4>
@@ -301,27 +399,30 @@ if df is not None:
         </div>
         """, unsafe_allow_html=True)
 
-        # --- 1. METRIC SELECTION ---
-        col_sel, col_empty = st.columns([1, 2])
-        with col_sel:
-            # Metric Mapping
-            METRICS_MAP_DIST = {
-                "% Docs Cited (Relevance)": '% Docs Cited',
-                "% Top 1% Documents (Excellence)": '% Documents in Top 1%',
-                "CNCI (Quality)": 'CNCI',
-                "Collab-CNCI (Collab Quality)": 'Collab-CNCI',
-                "Documents (Volume)": 'Documents',
-                "Times Cited (Impact)": 'Times Cited'
-            }
-            target_metric_label = st.selectbox("Select Metric to Analyze:", list(METRICS_MAP_DIST.keys()))
-            target_col = METRICS_MAP_DIST[target_metric_label]
+        # --- Step 2 : Create Metrics Drop ---
+        st.markdown("##### Select Metric for Analysis") # <-- title of metric select
+        # Metric Mapping
+        METRICS_MAP_DIST = {
+            "% Docs Cited (Relevance)": '% Docs Cited',
+            "% Top 1% Documents (Excellence)": '% Documents in Top 1%',
+            "CNCI (Quality)": 'CNCI',
+            "Collab-CNCI (Collab Quality)": 'Collab-CNCI',
+            "Documents (Volume)": 'Documents',
+            "Times Cited (Impact)": 'Times Cited'
+        }
+        target_metric_label = st.selectbox(
+            "Choose Metric to see distribution of it:", 
+            list(METRICS_MAP_DIST.keys()), 
+            index=1, # <-- % Docs Cited
+        )
+        target_col = METRICS_MAP_DIST[target_metric_label]
+
+        # --- Step 3 : Visualization ---
+        st.markdown(f"#### Distribution of {target_metric_label}") # <-- title of chart
 
         # Calculate Statistics
         mean_val = df[target_col].mean()
         median_val = df[target_col].median()
-        
-        # --- 2. MAIN VISUAL (HISTOGRAM) ---
-        st.markdown(f"##### 📊 Distribution of {target_metric_label}")
         
         # Metrics Display
         m1, m2, m3 = st.columns(3)
@@ -333,7 +434,7 @@ if df is not None:
         skew_text = "Symmetric (Balanced)" if -0.5 < skew < 0.5 else ("Right Skewed (Elite Few)" if skew > 0 else "Left Skewed (Most perform well)")
         m3.metric("Distribution Shape", skew_text)
 
-        # Histogram Plot
+        # Create Histogram Plot
         fig_dist = px.histogram(
             df, 
             x=target_col, 
@@ -344,30 +445,25 @@ if df is not None:
             title=f"Spread of {target_metric_label}"
         )
 
-
-        # 1. Add Lines (Without Text)
+        # Add Lines
         fig_dist.add_vline(x=mean_val, line_dash="dash", line_color="red")
         fig_dist.add_vline(x=median_val, line_dash="dot", line_color="blue")
         
-        # 2. Add Annotations (Text Manually Placed Once at Top)
-        # Mean Label
-        fig_dist.add_annotation(
+        # Add Annotations 
+        fig_dist.add_annotation(  # <-- Mean Label
             x=mean_val, y=1.02, yref="paper", text="Mean", 
             showarrow=False, font=dict(color="red")
         )
-        
-        # Median Label (Placed slightly lower to avoid overlap)
-        fig_dist.add_annotation(
+        fig_dist.add_annotation(  # <-- Median Label
             x=median_val, y=0.95, yref="paper", text="Median", 
             showarrow=False, font=dict(color="blue")
         )
-        
+
         # Add Baseline Line only for relevant metrics
         if target_col in ['CNCI', 'Collab-CNCI', '% Documents in Top 1%']:
             baseline = 1.0
             fig_dist.add_vline(x=baseline, line_dash="solid", line_color="green")
-            # Baseline Label
-            fig_dist.add_annotation(
+            fig_dist.add_annotation(    # <-- Baseline Label
                 x=baseline, y=0.88, yref="paper", text="Global Baseline (1.0)", 
                 showarrow=False, font=dict(color="green")
             )
@@ -375,34 +471,29 @@ if df is not None:
         fig_dist.update_layout(height=450, xaxis_title=target_metric_label, yaxis_title='Frequency (Count)', showlegend=False)
         st.plotly_chart(fig_dist, use_container_width=True)
 
-        st.markdown("---")
-
-        # --- 3. DETAILED TABLES (3 COLUMNS) ---
-        
+        # --- Step 4 : Detailed Tables --- 
         t1, t2, t3 = st.columns(3)
-
-        # TABLE 1: STATISTICAL SUMMARY
+        
+        # Table 1 : Statistics Summary
         with t1:
             st.markdown("###### 1. Statistical Summary")
             st.caption("Descriptive statistics for the entire dataset.")
             stats_df = df[target_col].describe().to_frame(name='Value')
             st.dataframe(stats_df, use_container_width=True)
 
-        # TABLE 2: CONSISTENCY CHECK
+        # Table 2 : Consistency Check
         with t2:
             st.markdown("###### 2. Consistency Leaders")
-            # Logic: "Consistent" means appearing in the Top 25% (75th Percentile) frequently
+            # Consistent means appearing in the Top 25% (75th Percentile) frequently
             threshold = df[target_col].quantile(0.75)
             st.caption(f"Count of years where Country was in **Top 25%** (> {threshold:.2f}).")
-            
             consistent_performers = df[df[target_col] > threshold]['Country'].value_counts().head(5).to_frame(name='High Perf. Years')
             st.dataframe(consistent_performers, use_container_width=True)
 
-        # TABLE 3: PEAK PERFORMANCE (SINGLE YEAR)
+        # Table 3 : Peak Performance (Single Year)
         with t3:
             st.markdown("###### 3. Top 5 Single-Year Peaks")
             st.caption(f"Highest recorded values for {target_metric_label}.")
-            
             top_peaks = df.sort_values(by=target_col, ascending=False).head(5)[['Country', 'Year', target_col]]
             # Formatting Value Column
             top_peaks.rename(columns={target_col: 'Value'}, inplace=True)
@@ -411,6 +502,7 @@ if df is not None:
 
 # "⚔️4. Competitive Landscape"
     with tab4: 
+        # --- Step 1 : Create Insight Box ---
         st.markdown("""
         <div class="insight-box orange-box">
             <h4>⚔️ Insight 4: Competitive Analysis (The Closing Gap)</h4>
@@ -424,6 +516,8 @@ if df is not None:
         </div>
         """, unsafe_allow_html=True)
         
+        # --- Step 2 : Create Matrics Drop Down ---
+        st.markdown("##### Select Metric for Analysis")
         METRICS = {
             "Times Cited (Impact)": 'Times Cited',
             "Documents (Volume)": 'Documents',
@@ -441,6 +535,7 @@ if df is not None:
         )
         selected_metric_col = METRICS[selected_metric_label]
 
+        # --- Step 3 : Create radio button ---
         view_mode = st.radio(
             "Select Analysis Mode:",
             ("Market View (Top 2 Overall)", "Rivalry View (Compare Specific Countries)"),
@@ -448,13 +543,13 @@ if df is not None:
             label_visibility="collapsed"
         )
 
-        # ==============================================================================
-        # --- MODE 1: MARKET VIEW (UPDATED TO 0-100% SCALE) ---
-        # ==============================================================================
+        # --- Step 4 : Visualization ---
+        
+        # Marketing View
         if view_mode == "Market View (Top 2 Overall)":
-            st.markdown(f"##### 1. Market View: Overall Leader's Dominance (Top 2 by {selected_metric_label})")
+            st.markdown(f"#### 1. Market View: Leader's Dominance - Top 2 by {selected_metric_label}") # <-- title of marketing view
             
-            gap_data = []
+            gap_data = [] 
             years = sorted(df['Year'].unique())
             for y in years:
                 year_df = df[df['Year'] == y].sort_values(by=selected_metric_col, ascending=False)
@@ -463,59 +558,57 @@ if df is not None:
                     
                     leader_val = leader[selected_metric_col]
                     runner_val = runner[selected_metric_col]
-                    total_val = leader_val + runner_val # Total for Normalization
+                    total_val = leader_val + runner_val # <-- Total for Normalization
 
-                    # UPDATED FORMULA: Normalized Margin (0-100%)
-                    # Formula: (Difference / Total) * 100
+                    # Formula: (Difference / Total) * 100 Normalized Margin (0-100%)
                     gap_pct = ((leader_val - runner_val) / total_val) * 100 if total_val > 0 else 0
                     
                     gap_data.append({'Year': y, 'Leader': leader['Country'], 'Runner-Up': runner['Country'], 'Dominance %': gap_pct})
             
-            gap_df = pd.DataFrame(gap_data)
+            gap_df = pd.DataFrame(gap_data) # <-- create new data frame for creating visual
 
             fig_gap_line = px.line(gap_df, x='Year', y='Dominance %', markers=True, 
-                                   title=f'Trend of the Overall Market Leader\'s Advantage (Normalized 0-100%)', 
                                    hover_data=['Leader', 'Runner-Up'])
             
             fig_gap_line.update_traces(line=dict(color='crimson', width=3), marker=dict(size=8))
             
-            # Add Reference Lines
-            fig_gap_line.add_hline(y=0, line_dash="dash", line_color="gray", annotation_text="No Gap (Equal)")
+            fig_gap_line.add_hline(y=0, line_dash="dash", line_color="gray", annotation_text="No Gap (Equal)") # <-- Reference line
             
-            # FORCE Y-AXIS TO 0-100 RANGE
+            # Y-axis zero to 100
             fig_gap_line.update_layout(
                 height=500, 
                 template='plotly_white', 
-                yaxis_title=f"Normalized Margin (%)",
+                yaxis_title=f"Normalized Dominance (%)",
                 yaxis=dict(range=[0, 100]) # <--- Locked Range
             )
             st.plotly_chart(fig_gap_line, use_container_width=True)
-
+            
+            # Create Caption
             st.caption("""
             ℹ️ **Note:** This chart uses a **Normalized Scale (0-100%)**. 
             - **0%**: Means the Leader and Runner-up are equal.
             - **Higher %**: Means the Leader dominates the Runner-up significantly.
             """)
-
-            st.markdown("---")
-            st.markdown(f"##### 🏆 Top 5 Most Dominant Years (Overall Market by {selected_metric_label})")
+            
+            # Create Table
+            st.markdown(f"##### Top 5 Most Dominant Years - {selected_metric_label}")
             top_5_dominance = gap_df.sort_values(by='Dominance %', ascending=False).head(5)
             st.dataframe(top_5_dominance.style.format({'Dominance %': '{:.1f}%'}), hide_index=True, use_container_width=True)
 
-        # ==============================================================================
-        # --- MODE 2: RIVALRY TREND VIEW (Already Correct) ---
-        # ==============================================================================
+        # Rivalry Trend View
         else:
-            st.markdown(f"##### 2. Rivalry Trends: Pairwise Dominance Evolution (by {selected_metric_label})")
+            st.markdown(f"#### 2. Rivalry Trends: Pairwise Dominance - by {selected_metric_label}") # <-- title of rivalry trend view
             
+            # Select Default Country
             available_countries = sorted(df['Country'].unique())
-            preferred_defaults = ['USA', 'CHINA'] 
+            preferred_defaults = ['USA', 'INDIA'] 
             valid_defaults = [country for country in preferred_defaults if country in available_countries]
             if len(valid_defaults) < 2 and len(available_countries) >= 2:
                 valid_defaults = available_countries[:min(3, len(available_countries))]
             elif len(valid_defaults) == 0:
                 valid_defaults = []
             
+            # Create Multi-Select for Country
             selected_countries = st.multiselect(
                 "Select countries to compare dominance trends:", 
                 available_countries, 
@@ -564,24 +657,22 @@ if df is not None:
                     if dominance_data:
                         dom_df = pd.DataFrame(dominance_data)
                         
-                        st.markdown(f"###### ⚔️ Dominance Trend: Normalized Competition Margin (%) - {selected_metric_label}")
                         fig_dom_trend = px.line(
                             dom_df, x='Year', y='Dominance %', color='Pair', markers=True,
                             hover_data={'Dominance %': ':.1f', 'Leader': True, 'Runner-Up': True},
-                            title=f'Normalized Margin (0-100%): How wide is the {selected_metric_label} gap?',
                             template='plotly_white'
                         )
                         fig_dom_trend.add_hline(y=0, line_dash="dash", line_color="black", annotation_text="Equal Impact (0% Gap)")
-                        fig_dom_trend.update_layout(height=450, yaxis_title=f"Normalized Dominance Margin (%) - {selected_metric_label}", yaxis=dict(range=[0, 100]))
+                        fig_dom_trend.update_layout(height=450, yaxis_title=f"Normalized Dominance (%)", yaxis=dict(range=[0, 100]))
                         st.plotly_chart(fig_dom_trend, use_container_width=True)
                         
                         st.caption("""
-                        ℹ️ **How to read this chart:** - **Value**: Represents the **Normalized Percentage Margin**.
+                        ℹ️ **How to read this chart:** 
+                        - **Value**: Represents the **Normalized Percentage Margin**.
                         - **0%**: Equal. **100%**: Absolute dominance.
                         """)
-                        
-                        st.markdown("---")
-                        st.markdown(f"##### 🏆 Top 5 Instances of Dominance (Largest Normalized Margin by {selected_metric_label})")
+                      
+                        st.markdown(f"##### Top 5 Instances of Dominance - {selected_metric_label}")
                         top_5_dominance = dom_df.sort_values(by='Dominance %', ascending=False).head(5)
                         top_5_display = top_5_dominance[['Year', 'Pair', 'Leader', 'Runner-Up', 'Dominance %']].copy()
                         top_5_display['Normalized Margin (%)'] = top_5_display['Dominance %']
@@ -593,6 +684,7 @@ if df is not None:
 
 # "🚨5. Outlier Analysis"
     with tab5: 
+        # --- Step 1 : Create Insight Box ---
         st.markdown("""
         <div class="insight-box red-box">
             <h4>🚨 Insight 5: Outlier Analysis (The "Quality Ceiling")</h4>
@@ -604,46 +696,41 @@ if df is not None:
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("### 🕵️‍♀️ Interactive Outlier Detector")
-        st.caption("Select a metric below to identify statistical anomalies (Data points exceeding 1.5x IQR).")
-
-        # 1. Metric Selection
+        # --- Step 2 : Create Matric Drop Down ---
+        st.markdown("##### Select Matric for Analysis")
+        # Metric Selection
         METRICS_OUTLIER_MAP = {
             "Document (Volume)": 'Documents',
             "CNCI (Quality)": 'CNCI',
             "Times Cited (Impact)": 'Times Cited',
             "% Doc Cited (Relevance)": '% Docs Cited',
             "Collab-CNCI (Collab Quality)": 'Collab-CNCI',
-            "% top 1 Document % (Excellence)": '% Documents in Top 1%'
+            "% Top 1 Document % (Excellence)": '% Documents in Top 1%'
         }
-        
         selected_outlier_label = st.selectbox(
             "Choose Metric to Scan for Outliers:", 
             list(METRICS_OUTLIER_MAP.keys())
         )
         outlier_col = METRICS_OUTLIER_MAP[selected_outlier_label]
 
-        # 2. Dynamic Calculation (IQR Method)
+        # --- Step 4 : Outlier Calculation
+        # Dynamic Calculation (IQR Method)
         Q1 = df[outlier_col].quantile(0.25)
         Q3 = df[outlier_col].quantile(0.75)
         IQR = Q3 - Q1
-        
         upper_bound = Q3 + 1.5 * IQR
         lower_bound = Q1 - 1.5 * IQR # Standard method includes lower bound too
-        
         # Identify Outliers
-        # Outlier is defined as anything OUTSIDE the range [Lower, Upper]
         outliers_df = df[(df[outlier_col] > upper_bound) | (df[outlier_col] < lower_bound)].copy()
-        
         # Determine Status for Color
         def get_status(value):
             if value > upper_bound: return 'High Outlier'
             elif value < lower_bound: return 'Low Outlier'
             else: return 'Normal'
-
         df['Outlier_Status'] = df[outlier_col].apply(get_status)
 
-        # 3. Dynamic Visualization
+        # --- Step 5 : Dynamic Visualization ---
+        st.markdown(f"#### Anomaly Detection in {selected_outlier_label}")
         col_chart, col_stats = st.columns([3, 1])
         
         with col_chart:
@@ -655,7 +742,6 @@ if df is not None:
                 color_discrete_map={'High Outlier': '#EF553B', 'Low Outlier': '#FFA15A', 'Normal': 'lightgrey'}, 
                 hover_name='Country', 
                 hover_data=['Year', outlier_col, 'Documents'],
-                title=f'Anomaly Detection in {selected_outlier_label}',
                 size='Documents', # Bubble size represents Volume context
                 size_max=20
             )
@@ -683,24 +769,20 @@ if df is not None:
             st.plotly_chart(fig_out, use_container_width=True)
 
         with col_stats:
-            st.markdown("#### 📊 Stats")
+            st.markdown("#### Stats")
             st.metric("Upper Threshold", f"{upper_bound:.2f}")
             if lower_bound > 0:
                 st.metric("Lower Threshold", f"{lower_bound:.2f}")
             st.metric("Total Outliers", f"{len(outliers_df)}")
             st.info("Note: Bubble size represents Publication Volume.")
 
-        # 4. Outlier Table
-        st.markdown("---")
+        # --- Step 6 : Outlier Table ---
         if not outliers_df.empty:
-            st.markdown(f"#### 🚩 Detected Anomalies: {selected_outlier_label}")
-            
+            st.markdown(f"#### Detected Anomalies in {selected_outlier_label}")
             # Clean up table for display
             display_outliers = outliers_df[['Country', 'Year', outlier_col]].sort_values(by=outlier_col, ascending=False)
-            
             # Rename column for clarity
             display_outliers.rename(columns={outlier_col: f"Value ({outlier_col})"}, inplace=True)
-            
             st.dataframe(
                 display_outliers, 
                 hide_index=True, 
@@ -711,10 +793,7 @@ if df is not None:
 
 # "🔗6. Correlation Analysis"
     with tab6:
-        # --- 1. Static Insight (Keep this for context) ---
-        corr_weak = df['Collab-CNCI'].corr(df['CNCI'])
-        corr_strong = df['Documents'].corr(df['Times Cited'])
-        
+        # --- Step 1 : Create Insight Box
         st.markdown("""
         <div class="insight-box purple-box">
             <h4>🤝 Insight 6: The Collaboration Myth</h4>
@@ -728,15 +807,12 @@ if df is not None:
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("### 🧪 Dynamic Correlation Explorer")
+        # --- Step 2 : Create Metric Drop Down
+        st.markdown("##### Select Metric for Analysis")
         st.caption("Select any two metrics to investigate their relationship.")
 
-        # --- 2. Configuration (Dropdowns) ---
-        # Ensure 'Top 10%' column exists (Safety check for dummy data users)
         if '% Documents in Top 10%' not in df.columns:
-            # Fallback creation if column is missing in dataset
             df['% Documents in Top 10%'] = df['% Documents in Top 1%'] * 3.5 
-
         CORR_METRICS = {
             "Documents (Volume)": 'Documents',
             "CNCI (Quality)": 'CNCI',
@@ -758,7 +834,7 @@ if df is not None:
             y_label = st.selectbox("Select Y-Axis Metric:", list(CORR_METRICS.keys()), index=2)
             y_col = CORR_METRICS[y_label]
 
-        # --- 3. Calculation & Logic ---
+        # --- Step 3 : Calculation for Correlation ratio ---
         r_value = df[x_col].corr(df[y_col])
         
         # Determine Relationship Strength for Color/Text
@@ -775,12 +851,14 @@ if df is not None:
         with c3:
             st.metric(f"Pearson Correlation (r)", f"{r_value:.4f}", delta=strength_text)
 
-        # --- 4. Dynamic Visualization ---
+        # --- Step 4 : Dynamic Visualization ---
+        st.markdown(f"#### Correlation Analysis - {x_label} vs {y_label}")
         try:
             trend_mode = "ols"
         except:
-            trend_mode = None # Fallback if statsmodels is missing
+            trend_mode = None # <-- fallback if statsmodels is missing
 
+        # Create Scatter Plot
         fig_corr = px.scatter(
             df, 
             x=x_col, 
@@ -788,7 +866,6 @@ if df is not None:
             hover_name='Country',
             hover_data=['Year'],
             trendline=trend_mode,
-            title=f"Correlation Analysis: {x_label} vs {y_label}",
             labels={x_col: x_label, y_col: y_label},
             opacity=0.65
         )
@@ -807,6 +884,7 @@ if df is not None:
 
 # "📈7. Performance Trends" 
     with tab7:
+        # --- Step 1 : Create Insight Box
         st.markdown("""
         <div class="insight-box green-box">
             <h4>🌍 Insight 7: Performance Analysis (The Global Leaderboard)</h4>
@@ -820,11 +898,12 @@ if df is not None:
             <p class="mb-0"><b>🇮🇳 India Watch:</b> India's rankings (<b>11th in Volume, 10th in Quality, 9th in Elite Impact</b>) across these diverse metrics highlight its status as a balanced, emerging power that is competing neck-to-neck with developed economies.</p>
         </div>
         """, unsafe_allow_html=True)
-        
-        # --- 1. CONFIGURATION & WIDGETS ---
-        # [STEP 1] Select Metric FIRST (Needed to calculate defaults)
+
+        # --- Step 2 : Create Matrics and Country Drop Down ---
+        st.markdown(" ##### Select Matric and Country for Analysis ")
+
         col_controls1, col_controls2 = st.columns([1, 1])
-        
+        # Matric Drop Down
         with col_controls2:
             # Metric Mapping
             METRICS_MAP = {
@@ -838,8 +917,6 @@ if df is not None:
             selected_metric_label = st.selectbox("Select Performance Metric:", list(METRICS_MAP.keys()))
             selected_col = METRICS_MAP[selected_metric_label]
 
-        # [STEP 2] Calculate Dynamic Defaults (Top 10 based on Metric)
-        # Determine aggregation type for ranking
         if selected_col in ['Documents', 'Times Cited']:
             agg_func_rank = 'sum'
         else:
@@ -851,8 +928,6 @@ if df is not None:
 
         with col_controls1:
             available_countries = sorted(df['Country'].unique().tolist())
-            
-            # Key trick: Changing key forces widget to reset with new defaults when metric changes
             selected_countries = st.multiselect(
                 "Select Countries to Compare (Graph Only)", 
                 available_countries, 
@@ -860,7 +935,8 @@ if df is not None:
                 key=f"multiselect_{selected_metric_label}" 
             )
         
-        # View Toggle
+
+        # --- Step 3 : Create Toggle ---
         view_option = st.radio(
             "Select View Type:",
             ("View Trends Over Time", "View Overall Performance"),
@@ -868,20 +944,17 @@ if df is not None:
             label_visibility="collapsed"
         )
 
-        # --- 2. LOGIC & VISUALIZATION ---
-        
-        # DATA PREPARATION:
+        # --- Step 4 : Visualization
+        # Data Preparation
         # A. Visual Data (Filtered by User Selection)
         if selected_countries:
             df_visual = df[df['Country'].isin(selected_countries)]
         else:
             df_visual = pd.DataFrame() # Empty if nothing selected
 
-        # ==============================================================================
-        # VIEW 1: TRENDS OVER TIME
-        # ==============================================================================
+        # View 1 : Trend Over Time
         if view_option == "View Trends Over Time":
-            st.markdown(f"#### 📈 Trend Analysis: {selected_metric_label}")
+            st.markdown(f"#### Trend Analysis: {selected_metric_label}")
             
             # --- VISUAL (Filtered by Selection) ---
             if not df_visual.empty:
@@ -891,7 +964,6 @@ if df is not None:
                     y=selected_col, 
                     color='Country', 
                     markers=True,
-                    title=f"Year-wise Evolution of {selected_metric_label}",
                     hover_data=['Documents'] 
                 )
                 
@@ -903,12 +975,10 @@ if df is not None:
             else:
                 st.info("Please select countries to view the trend graph.")
             
-            st.markdown("---")
-            
             # --- TABLE (Global Top 10 - Unfiltered) ---
             col_tbl_desc, col_tbl_widget = st.columns([3, 1])
             with col_tbl_desc:
-                st.markdown(f"##### 🗓️ Yearly Global Leaderboard: Top 10 in {selected_metric_label}")
+                st.markdown(f"##### Yearly Global Leaderboard: Top 10 in {selected_metric_label}")
                 st.caption("This table shows the **Global Top 10** for the selected year, regardless of the countries selected in the graph.")
             with col_tbl_widget:
                 # Year Selector
@@ -925,11 +995,9 @@ if df is not None:
             
             st.table(display_df)
 
-        # ==============================================================================
-        # VIEW 2: OVERALL PERFORMANCE
-        # ==============================================================================
+        # View 2 : Overall Performance
         else:
-            st.markdown(f"#### 📊 Overall Performance: {selected_metric_label}")
+            st.markdown(f"#### Overall Performance: {selected_metric_label}")
             
             # Determine Format
             if selected_col in ['Documents', 'Times Cited']:
@@ -956,7 +1024,6 @@ if df is not None:
                     orientation='h', 
                     color='Country', 
                     text_auto=fmt,
-                    title=title_text
                 )
                 
                 if selected_col in ['CNCI', 'Collab-CNCI']:
@@ -967,10 +1034,8 @@ if df is not None:
             else:
                 st.info("Please select countries to view the performance chart.")
 
-            st.markdown("---")
-
             # --- TABLE (Global Top 10 - Unfiltered) ---
-            st.markdown(f"##### 🏆 Lifetime Global Leaderboard: Top 10 Overall ({selected_metric_label})")
+            st.markdown(f"##### Lifetime Global Leaderboard: Top 10 Overall ({selected_metric_label})")
             st.caption("This table ranks **All Countries** in the dataset.")
             
             # GLOBAL AGGREGATION (Using 'df', not 'df_visual')
