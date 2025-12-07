@@ -79,9 +79,10 @@ if df is not None:
         """)
         st.markdown("---")
         
-        # GitHub Link
+        
         st.header("Project Resources")
-        st.markdown("🔗 [View Source Code on GitHub](https://github.com/Omkar3101/iisc-eda-project)")
+        st.markdown("🔗 [View Source Code on GitHub](https://github.com/Omkar3101/iisc-eda-project)") # <-- GithubLink
+        st.markdown("📄 [View Project Presentation](https://gamma.app/docs/Global-Research-Performance-Analytics-ub6l0o8haqpk6uw)")
         st.markdown("---")
         
         # About Me
