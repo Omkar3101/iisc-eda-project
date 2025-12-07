@@ -103,9 +103,9 @@ if df is not None:
         "📈 7. Performance Trends"
     ])
 
-    # "📊 1. Overview & Key Findings"
+    # "1. Overview & Key Findings"
     with tab1:
-        # --- Step-1 : Insight Box ---
+        # --- Step 1 : Insight Box ---
         st.markdown(f"""
         <div class="insight-box blue-box">
             <h4>🔍 Insight 1: The 'Elite Club' & Decentralized Power</h4>
@@ -121,51 +121,58 @@ if df is not None:
         </div>
         """, unsafe_allow_html=True)
 
-        # --- Step 2 : Metric Selection Drop Down ---
-        st.markdown(" ##### Select Metric for Analysis ")
-        METRICS_MAP = {
-            "% Docs Cited (Relevance)": '% Docs Cited',
-            "% Top 1% Documents (Excellence)": '% Documents in Top 1%',
-            "CNCI (Quality)": 'CNCI',
-            "Collab-CNCI (Collab Quality)": 'Collab-CNCI',
-            "Documents (Volume)": 'Documents',
-            "Times Cited (Impact)": 'Times Cited'
-        }
-        selected_metric_label = st.selectbox(
-            "Choose a metric to update both charts below:",
-            list(METRICS_MAP.keys()),
-            index=2 # <-- Default CNCI
-        )
-        selected_col = METRICS_MAP[selected_metric_label]
+        # --- Step 2 : Controls (Metric Select & View Toggle) ---
+        c_ctrl1, c_ctrl2 = st.columns([1, 1])
 
-        col1, col2 = st.columns(2)
+        with c_ctrl2:
+            METRICS_MAP = {
+                "% Docs Cited (Relevance)": '% Docs Cited',
+                "% Top 1% Documents (Excellence)": '% Documents in Top 1%',
+                "CNCI (Quality)": 'CNCI',
+                "Collab-CNCI (Collab Quality)": 'Collab-CNCI',
+                "Documents (Volume)": 'Documents',
+                "Times Cited (Impact)": 'Times Cited'
+            }
+            selected_metric_label = st.selectbox(
+                "Select Metric:",
+                list(METRICS_MAP.keys()),
+                index=2 # <-- Default CNCI
+            )
+            selected_col = METRICS_MAP[selected_metric_label]
 
-        # --- Step 3 : Visual 1 - Strip Plot ---
-        with col1:
-            st.markdown(f"#### 1. Consistency Check: {selected_metric_label}") # <-- title for visual 1
+        with c_ctrl1:
+            # --- NEW RADIO BUTTON ---
+            analysis_view = st.radio(
+                "Select Analysis Perspective:",
+                ("1. Consistency Check (Strip Plot)", "2. Concentration Analysis (Pareto Chart)"),
+                horizontal=True
+            )
+
+        # --- Step 3 : Logic based on Radio Selection ---
+        # View 1: Consistency Check (Strip Plot)
+        if analysis_view == "1. Consistency Check (Strip Plot)":
+            st.markdown(f"#### 1. Consistency Analysis: {selected_metric_label}") 
             
-            baseline_metrics = ['CNCI', 'Collab-CNCI', '% Documents in Top 1%'] # <-- metrics which has global baseline
+            baseline_metrics = ['CNCI', 'Collab-CNCI', '% Documents in Top 1%'] 
 
-            # Seperate Global Baseline
+            # Separate Global Baseline
             if selected_col in baseline_metrics:
-                # Case 1: Quality/Percentage Metrics -> Use 1.0 as Threshold
                 threshold_val = 1.0
                 threshold_name = "Global Baseline"
                 label_below = "Below Baseline (< 1.0)"
                 label_above = "Above Baseline (>= 1.0)"
             else:
-                # Case 2: Volume/Count Metrics -> Use Median as Threshold
                 threshold_val = df[selected_col].median()
                 threshold_name = "Global Median"
                 label_below = f"Below Median (< {threshold_val:.2f})"
                 label_above = f"Above Median (>= {threshold_val:.2f})"
             
-            # Apply Logic to Dataframe
+            # Apply Logic
             df['Benchmark Status'] = df[selected_col].apply(
                 lambda x: label_below if x < threshold_val else label_above
             )
             
-            # Count failures
+            # Metric Display
             below_count = len(df[df[selected_col] < threshold_val])
             st.metric(
                 f"Years Below {threshold_name}", 
@@ -180,7 +187,7 @@ if df is not None:
                 y=selected_col, 
                 x='Country', 
                 color='Benchmark Status', 
-                color_discrete_map={   # <-- Map dynamic color
+                color_discrete_map={   
                     label_below: '#EF553B', 
                     label_above: '#636EFA'
                 },
@@ -189,42 +196,40 @@ if df is not None:
                 template='plotly_white'
             )
             
-            # Add the Threshold Line (Dynamic)
             fig_strip.add_hline(
                 y=threshold_val, 
                 line_dash="dash", 
                 line_color="black", 
                 annotation_text=f"{threshold_name} ({threshold_val:.2f})"
             )
-            fig_strip.update_layout(height=450)
+            
+            # Increased height slightly for better visibility in full width
+            fig_strip.update_layout(height=550) 
             st.plotly_chart(fig_strip, use_container_width=True)
             
             st.caption(f"ℹ️ **Note:** Red dots indicate years where performance dropped below the **{threshold_name}**.")
 
-        # --- Step 4 : VISUAL 2 - Pareto Chart ---
-        with col2:
-            st.markdown(f"#### 2. Concentration Analysis (Pareto): {selected_metric_label}") # <-- title for visual 2
+        # View 2: Pareto Chart
+        else:
+            st.markdown(f"#### 2. Concentration Analysis (Pareto): {selected_metric_label}") 
             
-            # Create Dataframe for Pareto Chart
-            pareto_df = df.groupby('Country')[selected_col].sum().reset_index() # <-- agg. selected col. according to country
-            pareto_df = pareto_df.sort_values(by=selected_col, ascending=False).reset_index(drop=True) # <-- put in desc.
+            # Logic same as before
+            pareto_df = df.groupby('Country')[selected_col].sum().reset_index() 
+            pareto_df = pareto_df.sort_values(by=selected_col, ascending=False).reset_index(drop=True) 
 
-            total_val = pareto_df[selected_col].sum()  # <-- sum of all values
-            pareto_df['Cumulative_Perc'] = (pareto_df[selected_col].cumsum() / total_val) * 100 # <-- get commulative pct.
-            pareto_df['Entity_Perc'] = ((pareto_df.index + 1) / len(pareto_df)) * 100 # <-- get entity pct.
-
+            total_val = pareto_df[selected_col].sum()  
+            pareto_df['Cumulative_Perc'] = (pareto_df[selected_col].cumsum() / total_val) * 100 
+            pareto_df['Entity_Perc'] = ((pareto_df.index + 1) / len(pareto_df)) * 100 
 
             try:
-                cutoff_row = pareto_df[pareto_df['Cumulative_Perc'] >= 80].iloc[0]  # <-- get row where cumm >= 80
-                cutoff_perc = cutoff_row['Entity_Perc'] # <-- get entity pct where cumm >= 80
+                cutoff_row = pareto_df[pareto_df['Cumulative_Perc'] >= 80].iloc[0]  
+                cutoff_perc = cutoff_row['Entity_Perc'] 
             except IndexError:
                 cutoff_perc = 100
 
-            # Add logic for result
             status_delta = "High Concentration (Monopoly)" if cutoff_perc <= 20 else "Distributed (Competitive)"
             delta_col = "inverse" if cutoff_perc <= 20 else "off"
 
-            # Show result
             st.metric(
                 "Entities needed for 80% Total Value", 
                 f"{cutoff_perc:.1f}%", 
@@ -234,10 +239,10 @@ if df is not None:
             
             # Create Pareto Chart
             fig_pareto = go.Figure()
-            fig_pareto.add_trace(go.Bar( # <-- create bar
+            fig_pareto.add_trace(go.Bar( 
                 x=pareto_df['Country'], y=pareto_df[selected_col], name='Value', marker_color='#ced4da'
             ))
-            fig_pareto.add_trace(go.Scatter( # <-- create trend line
+            fig_pareto.add_trace(go.Scatter( 
                 x=pareto_df['Country'], y=pareto_df['Cumulative_Perc'],
                 mode='lines+markers', name='Cumulative %', yaxis='y2', line=dict(color='#ef553b', width=3)
             ))
@@ -247,7 +252,7 @@ if df is not None:
                 yaxis=dict(title=f'Total {selected_metric_label}'),
                 yaxis2=dict(title='Cumulative %', overlaying='y', side='right', range=[0, 110]),
                 hovermode='x unified',
-                height=450,
+                height=550, # Increased height
                 showlegend=False
             )
 
@@ -256,7 +261,7 @@ if df is not None:
             
             st.caption("ℹ️ **Interpretation:** A steep red line rising quickly means a few countries hold all the power.")
 
-    # "🗺️2. Strategic Positioning"
+    # "2. Strategic Positioning"
     with tab2:
         # --- Step 1 : Insight Box ---
         st.markdown(f"""
@@ -273,10 +278,6 @@ if df is not None:
             <p><b>🇮🇳 India Watch:</b> India sits in the "Catch-up Zone" but is positioned critically close to the median lines for both Volume and CNCI. This indicates that India is not lagging significantly but is in a transition phase, growing simultaneously in quantity and quality to cross into the Elite quadrant.</p>
         </div>
         """, unsafe_allow_html=True)
-
-        # --- Step 2 : Create Metric Drop Down ---
-        st.markdown("##### Select Metric for Analysis")
-        st.markdown("Explore how countries position themselves based on different performance metrics. Use the dropdowns to change the axes.")
 
         STRATEGY_METRICS = {
             "% Docs Cited (Relevance)": '% Docs Cited',
@@ -346,7 +347,12 @@ if df is not None:
             log_x=log_x_bool,
             log_y=log_y_bool,
             color_continuous_scale='Plasma', 
-            height=600
+            height=600,
+            text='Country'
+        )
+
+        fig_quad.update_traces(
+                textposition='top center',  # <-- put text on topc
         )
         
         # Add Median Lines (Quadrants)
@@ -376,14 +382,14 @@ if df is not None:
             yaxis_title=y_label, 
             margin=dict(l=0, r=0, t=40, b=0),
             coloraxis_colorbar_title_text='Collab<br>Quality',
-            template="plotly_white"
+            template="plotly_white",
         )
         
         st.plotly_chart(fig_quad, use_container_width=True)
         
         st.caption(f"ℹ️ **Note:** Bubble Size = Total Documents. Color = Collab-CNCI Score. Axes Medians are calculated from country-level aggregates.")
 
-# "🎯3. Distribution Analysis"
+    # "3. Distribution Analysis"
     with tab3: 
         # --- Step 1 : Create Insight Box ---
         st.markdown("""
@@ -400,7 +406,7 @@ if df is not None:
         """, unsafe_allow_html=True)
 
         # --- Step 2 : Create Metrics Drop ---
-        st.markdown("##### Select Metric for Analysis") # <-- title of metric select
+        
         # Metric Mapping
         METRICS_MAP_DIST = {
             "% Docs Cited (Relevance)": '% Docs Cited',
@@ -411,7 +417,7 @@ if df is not None:
             "Times Cited (Impact)": 'Times Cited'
         }
         target_metric_label = st.selectbox(
-            "Choose Metric to see distribution of it:", 
+            "Select Metric to see distribution:", 
             list(METRICS_MAP_DIST.keys()), 
             index=1, # <-- % Docs Cited
         )
@@ -500,7 +506,7 @@ if df is not None:
             top_peaks.index = range(1, 6)
             st.dataframe(top_peaks, use_container_width=True)
 
-# "⚔️4. Competitive Landscape"
+    # "4. Competitive Landscape"
     with tab4: 
         # --- Step 1 : Create Insight Box ---
         st.markdown("""
@@ -516,32 +522,35 @@ if df is not None:
         </div>
         """, unsafe_allow_html=True)
         
-        # --- Step 2 : Create Matrics Drop Down ---
-        st.markdown("##### Select Metric for Analysis")
-        METRICS = {
-            "Times Cited (Impact)": 'Times Cited',
-            "Documents (Volume)": 'Documents',
-            "CNCI (Quality)": 'CNCI',
-            "Collab-CNCI (Collab Quality)": 'Collab-CNCI',
-            "% Docs Cited (Relevance)": '% Docs Cited',
-            "% Top 1 Document % (Excellence)": '% Documents in Top 1%',
-        }
 
-        selected_metric_label = st.selectbox(
-            "Select Metric for Dominance Analysis:",
-            list(METRICS.keys()),
-            index=0,
-            key='dominance_metric_select'
-        )
-        selected_metric_col = METRICS[selected_metric_label]
+        col1, col2 = st.columns([1,1])
 
-        # --- Step 3 : Create radio button ---
-        view_mode = st.radio(
-            "Select Analysis Mode:",
-            ("Market View (Top 2 Overall)", "Rivalry View (Compare Specific Countries)"),
-            horizontal=True,
-            label_visibility="collapsed"
-        )
+        with col2:   
+            # --- Step 2 : Create Matrics Drop Down ---
+            METRICS = {
+                "Times Cited (Impact)": 'Times Cited',
+                "Documents (Volume)": 'Documents',
+                "CNCI (Quality)": 'CNCI',
+                "Collab-CNCI (Collab Quality)": 'Collab-CNCI',
+                "% Docs Cited (Relevance)": '% Docs Cited',
+                "% Top 1 Document % (Excellence)": '% Documents in Top 1%',
+            }
+
+            selected_metric_label = st.selectbox(
+                "Select Metric:",
+                list(METRICS.keys()),
+                index=0,
+                key='dominance_metric_select'
+            )
+            selected_metric_col = METRICS[selected_metric_label]
+
+        with col1:
+            # --- Step 3 : Create radio button ---
+            view_mode = st.radio(
+                "Select View Type:",
+                ("Market View (Top 2 Overall)", "Rivalry View (Compare Specific Countries)"),
+                horizontal=True,
+            )
 
         # --- Step 4 : Visualization ---
         
@@ -597,8 +606,6 @@ if df is not None:
 
         # Rivalry Trend View
         else:
-            st.markdown(f"#### 2. Rivalry Trends: Pairwise Dominance - by {selected_metric_label}") # <-- title of rivalry trend view
-            
             # Select Default Country
             available_countries = sorted(df['Country'].unique())
             preferred_defaults = ['USA', 'INDIA'] 
@@ -607,7 +614,7 @@ if df is not None:
                 valid_defaults = available_countries[:min(3, len(available_countries))]
             elif len(valid_defaults) == 0:
                 valid_defaults = []
-            
+
             # Create Multi-Select for Country
             selected_countries = st.multiselect(
                 "Select countries to compare dominance trends:", 
@@ -615,6 +622,8 @@ if df is not None:
                 default=valid_defaults,
                 key='rivalry_country_select'
             )
+
+            st.markdown(f"#### 2. Rivalry Trends: Pairwise Dominance - by {selected_metric_label}") # <-- title of rivalry trend view
 
             if len(selected_countries) >= 2:
                 trend_df = df[df['Country'].isin(selected_countries)]
@@ -682,7 +691,7 @@ if df is not None:
             else:
                 st.warning("Please select at least two countries to generate the trend comparison.")
 
-# "🚨5. Outlier Analysis"
+    # "5. Outlier Analysis"
     with tab5: 
         # --- Step 1 : Create Insight Box ---
         st.markdown("""
@@ -697,7 +706,6 @@ if df is not None:
         """, unsafe_allow_html=True)
         
         # --- Step 2 : Create Matric Drop Down ---
-        st.markdown("##### Select Matric for Analysis")
         # Metric Selection
         METRICS_OUTLIER_MAP = {
             "Document (Volume)": 'Documents',
@@ -708,7 +716,7 @@ if df is not None:
             "% Top 1 Document % (Excellence)": '% Documents in Top 1%'
         }
         selected_outlier_label = st.selectbox(
-            "Choose Metric to Scan for Outliers:", 
+            "Select Metric to Scan for Outliers:", 
             list(METRICS_OUTLIER_MAP.keys())
         )
         outlier_col = METRICS_OUTLIER_MAP[selected_outlier_label]
@@ -791,7 +799,7 @@ if df is not None:
         else:
             st.success(f"✅ No statistical outliers detected for {selected_outlier_label}. The data is consistently distributed.")
 
-# "🔗6. Correlation Analysis"
+    # "6. Correlation Analysis"
     with tab6:
         # --- Step 1 : Create Insight Box
         st.markdown("""
@@ -808,9 +816,6 @@ if df is not None:
         """, unsafe_allow_html=True)
         
         # --- Step 2 : Create Metric Drop Down
-        st.markdown("##### Select Metric for Analysis")
-        st.caption("Select any two metrics to investigate their relationship.")
-
         if '% Documents in Top 10%' not in df.columns:
             df['% Documents in Top 10%'] = df['% Documents in Top 1%'] * 3.5 
         CORR_METRICS = {
@@ -882,9 +887,9 @@ if df is not None:
         
         st.info(f"💡 **Interpretation:** As **{x_label}** increases, **{y_label}** tends to change by a factor of **{r_value:.2f}**. (1.0 is perfect positive, -1.0 is perfect negative, 0 is no relation).")
 
-# "📈7. Performance Trends" 
+    # "7. Performance Trends" 
     with tab7:
-        # --- Step 1 : Create Insight Box
+        # --- Step 1 : Insight Box ---
         st.markdown("""
         <div class="insight-box green-box">
             <h4>🌍 Insight 7: Performance Analysis (The Global Leaderboard)</h4>
@@ -899,13 +904,10 @@ if df is not None:
         </div>
         """, unsafe_allow_html=True)
 
-        # --- Step 2 : Create Matrics and Country Drop Down ---
-        st.markdown(" ##### Select Matric and Country for Analysis ")
-
+        # --- Step 2 : Layout Controls (Columns) ---
         col_controls1, col_controls2 = st.columns([1, 1])
-        # Matric Drop Down
+        # 1. Metric Selector (Always Visible)
         with col_controls2:
-            # Metric Mapping
             METRICS_MAP = {
                 "Documents (Volume)": 'Documents',
                 "CNCI (Quality)": 'CNCI',
@@ -914,49 +916,57 @@ if df is not None:
                 "Collab-CNCI (Collab Quality)": 'Collab-CNCI',
                 "% Top 1% Documents (Excellence)": '% Documents in Top 1%'
             }
-            selected_metric_label = st.selectbox("Select Performance Metric:", list(METRICS_MAP.keys()))
+            selected_metric_label = st.selectbox("Select Metric:", list(METRICS_MAP.keys()))
             selected_col = METRICS_MAP[selected_metric_label]
+        # 2. View Type Toggle (Always Visible - moved up to control visibility of country select)
+        with col_controls1:
+            view_option = st.radio(
+                "Select View Type:",
+                ("View Trends Over Time", "View Overall Performance", "View Geographic Map"), 
+                horizontal=True
+            )
 
+        # --- Step 3 : Logic for Aggregation & Defaults ---
+        # Determine if Sum or Mean
         if selected_col in ['Documents', 'Times Cited']:
             agg_func_rank = 'sum'
+            fmt = '.2s'
         else:
             agg_func_rank = 'mean'
-            
-        # Calculate Global Ranks for Defaults
-        rank_df = df.groupby('Country')[selected_col].agg(agg_func_rank).sort_values(ascending=False).head(10)
-        top_10_countries_list = rank_df.index.tolist()
+            fmt = '.2f'
 
-        with col_controls1:
+        # --- Step 4 : Conditional Country Selector ---
+        # Logic: if view is geographic map then do not show country selector
+        selected_countries = []
+        
+        if view_option != "View Geographic Map":
+            # Calculate Defaults based on Global Top 10
+            rank_df = df.groupby('Country')[selected_col].agg(agg_func_rank).sort_values(ascending=False).head(10)
+            top_10_countries_list = rank_df.index.tolist()
             available_countries = sorted(df['Country'].unique().tolist())
+            
+            # Show Multiselect
             selected_countries = st.multiselect(
-                "Select Countries to Compare (Graph Only)", 
+                "Select Countries to Compare:", 
                 available_countries, 
                 default=top_10_countries_list, 
                 key=f"multiselect_{selected_metric_label}" 
             )
-        
+        else:
+            st.info("**Global View Active:** Showing data for all countries on the map.")          # <-- Map Mode Message
 
-        # --- Step 3 : Create Toggle ---
-        view_option = st.radio(
-            "Select View Type:",
-            ("View Trends Over Time", "View Overall Performance"),
-            horizontal=True,
-            label_visibility="collapsed"
-        )
 
-        # --- Step 4 : Visualization
-        # Data Preparation
-        # A. Visual Data (Filtered by User Selection)
+        # --- Step 5 : Visualization ---
+        # Data Filter for Trend/Bar Charts
         if selected_countries:
             df_visual = df[df['Country'].isin(selected_countries)]
         else:
-            df_visual = pd.DataFrame() # Empty if nothing selected
+            df_visual = pd.DataFrame()
 
-        # View 1 : Trend Over Time
+        # VIEW 1 : Trend Over Time
         if view_option == "View Trends Over Time":
             st.markdown(f"#### Trend Analysis: {selected_metric_label}")
             
-            # --- VISUAL (Filtered by Selection) ---
             if not df_visual.empty:
                 fig_trend = px.line(
                     df_visual, 
@@ -966,55 +976,37 @@ if df is not None:
                     markers=True,
                     hover_data=['Documents'] 
                 )
-                
                 if selected_col in ['CNCI', 'Collab-CNCI']:
                     fig_trend.add_hline(y=1.0, line_dash="dash", line_color="red", annotation_text="Global Baseline (1.0)")
                 
                 fig_trend.update_layout(height=500, template='plotly_white', xaxis_title="Year", yaxis_title=selected_metric_label)
                 st.plotly_chart(fig_trend, use_container_width=True)
             else:
-                st.info("Please select countries to view the trend graph.")
+                st.warning("Please select at least one country above to view trends.")
             
-            # --- TABLE (Global Top 10 - Unfiltered) ---
-            col_tbl_desc, col_tbl_widget = st.columns([3, 1])
-            with col_tbl_desc:
+            # Table Logic
+            trend_col1, trend_col2 = st.columns([2,1])
+
+            with trend_col1:
                 st.markdown(f"##### Yearly Global Leaderboard: Top 10 in {selected_metric_label}")
-                st.caption("This table shows the **Global Top 10** for the selected year, regardless of the countries selected in the graph.")
-            with col_tbl_widget:
-                # Year Selector
+            with trend_col2:
                 available_years = sorted(df['Year'].unique(), reverse=True)
                 target_year = st.selectbox("Select Year for Ranking:", available_years)
 
-            # GLOBAL FILTER (Using 'df', not 'df_visual')
             top_10_year = df[df['Year'] == target_year].sort_values(by=selected_col, ascending=False).head(10)
             
-            # Formatting
             display_df = top_10_year[['Country', selected_col]].copy()
             display_df.rename(columns={selected_col: selected_metric_label}, inplace=True)
-            display_df.index = range(1, len(display_df) + 1) # Rank 1 to 10
-            
+            display_df.index = range(1, len(display_df) + 1)
             st.table(display_df)
 
-        # View 2 : Overall Performance
-        else:
+
+        # VIEW 2 : Overall Performance
+        elif view_option == "View Overall Performance":
             st.markdown(f"#### Overall Performance: {selected_metric_label}")
             
-            # Determine Format
-            if selected_col in ['Documents', 'Times Cited']:
-                agg_func = 'sum'
-                y_label = f"Total {selected_col}"
-                title_text = f"Lifetime Total: {selected_metric_label}"
-                fmt = '.2s' 
-            else:
-                agg_func = 'mean'
-                y_label = f"Average {selected_col}"
-                title_text = f"Lifetime Average: {selected_metric_label}"
-                fmt = '.2f' 
-            
-            # --- VISUAL (Filtered by Selection) ---
             if not df_visual.empty:
-                # Aggregate Visual Data
-                df_visual_agg = df_visual.groupby('Country')[selected_col].agg(agg_func).reset_index()
+                df_visual_agg = df_visual.groupby('Country')[selected_col].agg(agg_func_rank).reset_index()
                 df_visual_agg = df_visual_agg.sort_values(by=selected_col, ascending=True) 
 
                 fig_overall = px.bar(
@@ -1025,26 +1017,62 @@ if df is not None:
                     color='Country', 
                     text_auto=fmt,
                 )
-                
                 if selected_col in ['CNCI', 'Collab-CNCI']:
                     fig_overall.add_vline(x=1.0, line_dash="dash", line_color="red", annotation_text="Global Baseline")
                 
-                fig_overall.update_layout(height=500, template='plotly_white', xaxis_title=y_label, showlegend=False)
+                fig_overall.update_layout(height=500, template='plotly_white', xaxis_title=f"Total/Avg {selected_metric_label}", showlegend=False)
                 st.plotly_chart(fig_overall, use_container_width=True)
             else:
-                st.info("Please select countries to view the performance chart.")
+                st.warning("Please select at least one country above to view performance.")
 
-            # --- TABLE (Global Top 10 - Unfiltered) ---
-            st.markdown(f"##### Lifetime Global Leaderboard: Top 10 Overall ({selected_metric_label})")
-            st.caption("This table ranks **All Countries** in the dataset.")
-            
-            # GLOBAL AGGREGATION (Using 'df', not 'df_visual')
-            df_global_agg = df.groupby('Country')[selected_col].agg(agg_func).reset_index()
+            # Overall Table Logic
+            st.markdown(f"##### Lifetime Global Leaderboard: Top 10 Overall {selected_metric_label}")
+            df_global_agg = df.groupby('Country')[selected_col].agg(agg_func_rank).reset_index()
             top_10_overall = df_global_agg.sort_values(by=selected_col, ascending=False).head(10)
-            
-            # Formatting
             display_overall = top_10_overall[['Country', selected_col]].copy()
             display_overall.rename(columns={selected_col: selected_metric_label}, inplace=True)
             display_overall.index = range(1, len(display_overall) + 1)
-            
             st.table(display_overall)
+
+
+        # VIEW 3 : Geographic Map (Satellite Style)
+        elif view_option == "View Geographic Map":
+            st.markdown(f"#### Global Heatmap: {selected_metric_label}")
+            st.caption(f"Visualizing Lifetime **{agg_func_rank.title()}** of {selected_metric_label} across the globe.")
+
+            # 1. Aggregate Data for Map
+            map_df = df.groupby('Country')[selected_col].agg(agg_func_rank).reset_index()
+            
+            # 2. Create Map
+            fig_map = px.choropleth(
+                map_df,
+                locations="Country",
+                locationmode='country names',
+                color=selected_col,
+                hover_name="Country",
+                color_continuous_scale="Viridis_r" if agg_func_rank == 'mean' else "Plasma", # Different themes for volume/quality
+                title=f"Global Intensity of {selected_metric_label}"
+            )
+
+            fig_map.update_geos(
+                visible=True,
+                resolution=50,
+                showcountries=True, countrycolor="black",
+                showcoastlines=True, coastlinecolor="black",
+                showlakes=False,
+                projection_type="natural earth" # Looks like a 3D-ish flat map
+            )
+
+            fig_map.update_layout(
+                height=600,
+                margin={"r":0,"t":40,"l":0,"b":0},
+                paper_bgcolor="black", # Chart background black
+                font_color="white",    # Text white
+                coloraxis_colorbar=dict(
+                    title=f"{selected_metric_label}",
+                    tickfont=dict(color="white"),
+                    title_font=dict(color="white")
+                )
+            )
+
+            st.plotly_chart(fig_map, use_container_width=True)
