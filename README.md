@@ -13,6 +13,7 @@ The final deliverable is a multi-page interactive dashboard built with Python an
 The interactive dashboard is deployed on Streamlit Community Cloud:
 
 **[➡️ View the Live Dashboard](https://global-research-analytics.streamlit.app/)**
+**[📄 View Presentation Slides](https://gamma.app/docs/Global-Research-Performance-Analytics-ub6l0o8haqpk6uw?mode=doc) **
 
 ---
 
