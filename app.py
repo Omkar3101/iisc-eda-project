@@ -1052,7 +1052,6 @@ if df is not None:
                 color=selected_col,
                 hover_name="Country",
                 color_continuous_scale="Viridis_r" if agg_func_rank == 'mean' else "Plasma", # Different themes for volume/quality
-                title=f"Global Intensity of {selected_metric_label}"
             )
 
             fig_map.update_geos(
@@ -1067,12 +1066,12 @@ if df is not None:
             fig_map.update_layout(
                 height=600,
                 margin={"r":0,"t":40,"l":0,"b":0},
-                paper_bgcolor="black", # Chart background black
-                font_color="white",    # Text white
+                paper_bgcolor="white", # Chart background black
+                font_color="black",    # Text white
                 coloraxis_colorbar=dict(
                     title=f"{selected_metric_label}",
-                    tickfont=dict(color="white"),
-                    title_font=dict(color="white")
+                    tickfont=dict(color="black"),
+                    title_font=dict(color="black")
                 )
             )
 
